@@ -9,3 +9,6 @@ budget_email: you@example.com
 # Interface endpoints cost ~$0.01/hr/AZ each. Leave empty until a job proves it needs one.
 # Allowed: logs, sts, ecr.api, ecr.dkr, sagemaker.api, sagemaker.runtime
 interface_endpoints: []
+# SageMaker managed MLflow tracking server: ~$0.60/hr (Small) while it exists. Set true for a
+# working session, then back to false and apply (or destroy) to stop the charge.
+enable_mlflow: false

@@ -12,9 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
 COPY container/requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
-# Project code (src/sepsis) and, from Phase 6, the vendored scoring script.
+# Project code (src/sepsis) and the vendored official scoring script (third_party/).
 COPY pyproject.toml /opt/sepsis/
 COPY src /opt/sepsis/src
+COPY third_party /opt/sepsis/third_party
+ENV SEPSIS_THIRD_PARTY=/opt/sepsis/third_party
 RUN pip install --no-deps /opt/sepsis
 
 # Runs as root on purpose: SageMaker mounts /opt/ml/processing/* and /opt/ml/model root-owned,

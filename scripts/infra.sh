@@ -16,6 +16,7 @@ v["aws_profile"] = s["aws_profile"]
 v["budget_usd"] = s["budget_usd"]
 v["budget_email"] = s["budget_email"]
 v["interface_endpoints"] = s.get("interface_endpoints", [])
+v["enable_mlflow"] = bool(s.get("enable_mlflow", False))
 open("infra/terraform.tfvars.json", "w").write(json.dumps(v, indent=2))
 PY
 

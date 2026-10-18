@@ -25,3 +25,9 @@ variable "vpc_cidr" {
   type    = string
   default = "10.20.0.0/16"
 }
+
+variable "enable_mlflow" {
+  description = "Create the SageMaker managed MLflow tracking server (billable by the hour while it exists, ~$0.60/hr for Small). Off by default."
+  type        = bool
+  default     = false
+}

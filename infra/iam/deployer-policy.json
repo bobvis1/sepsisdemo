@@ -25,6 +25,17 @@
       "Resource": "*"
     },
     {
+      "Sid": "ServiceQuotasServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/servicequotas.amazonaws.com/AWSServiceRoleForServiceQuotas",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "servicequotas.amazonaws.com"
+        }
+      }
+    },
+    {
       "Sid": "NetworkingTerraform",
       "Effect": "Allow",
       "Action": "ec2:*",
@@ -95,6 +106,17 @@
       "Effect": "Allow",
       "Action": "sagemaker:*",
       "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "MlflowLogging",
+      "Effect": "Allow",
+      "Action": "sagemaker-mlflow:*",
+      "Resource": "arn:aws:sagemaker:us-east-2:*:mlflow-tracking-server/sepsis-*",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-2"

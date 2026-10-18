@@ -26,6 +26,8 @@ packages = ["src/sepsis"]
 
 [tool.ruff]
 line-length = 100
+# Vendored upstream code is kept byte-for-byte; never lint or reformat it.
+extend-exclude = ["third_party"]
 src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]

@@ -5,3 +5,6 @@ output "role_arn" { value = aws_iam_role.sagemaker.arn }
 output "subnet_ids" { value = aws_subnet.private[*].id }
 output "security_group_id" { value = aws_security_group.jobs.id }
 output "ecr_repository_url" { value = aws_ecr_repository.main.repository_url }
+output "mlflow_tracking_server_arn" {
+  value = var.enable_mlflow ? aws_sagemaker_mlflow_tracking_server.this[0].arn : null
+}
