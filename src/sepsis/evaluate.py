@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import tarfile
+import tempfile
 from pathlib import Path
 
 import joblib
@@ -28,11 +29,14 @@ EPS = 1e-6
 
 
 def load_model(model_dir: Path):
+    """Load model.joblib, from a SageMaker model.tar.gz (extracted to a temp dir) or a folder."""
     tar = model_dir / "model.tar.gz"
     if tar.exists():
-        with tarfile.open(tar) as tf:
-            tf.extractall(model_dir, filter="data")
-    bundle = joblib.load(model_dir / "model.joblib")
+        with tempfile.TemporaryDirectory() as tmp, tarfile.open(tar) as tf:
+            tf.extractall(tmp, filter="data")
+            bundle = joblib.load(Path(tmp) / "model.joblib")
+    else:
+        bundle = joblib.load(model_dir / "model.joblib")
     return bundle["model"], bundle["columns"]
 
 

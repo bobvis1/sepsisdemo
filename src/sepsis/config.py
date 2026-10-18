@@ -35,6 +35,7 @@ class Infra:
     subnet_ids: list[str]
     security_group_id: str
     ecr_repository_url: str
+    model_package_group_name: str = "sepsis-models"
 
 
 def load_settings() -> Settings:
@@ -57,6 +58,7 @@ def load_infra() -> Infra:
         subnet_ids=v["subnet_ids"],
         security_group_id=v["security_group_id"],
         ecr_repository_url=v["ecr_repository_url"],
+        model_package_group_name=v.get("model_package_group_name") or "sepsis-models",
     )
 
 

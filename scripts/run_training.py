@@ -19,18 +19,10 @@ import tempfile
 from pathlib import Path
 
 from sagemaker.core.helper.session_helper import Session
-from sagemaker.train import ModelTrainer
-from sagemaker.train.configs import (
-    Compute,
-    InputData,
-    Networking,
-    OutputDataConfig,
-    SourceCode,
-    StoppingCondition,
-    Tag,
-)
+from sagemaker.train.configs import InputData
 
 from sepsis.config import boto_session, load_infra, load_settings
+from sepsis.sm_common import hp_to_args, make_trainer
 
 
 def latest_features_prefix(s3, bucket: str) -> str:
@@ -66,44 +58,12 @@ def main() -> None:
     s3 = boto.client("s3")
     prefix = args.features_prefix or latest_features_prefix(s3, infra.bucket)
     base = f"s3://{infra.bucket}/{prefix}"
-    cli_args: list[str] = ["--model", args.model]
-    for kv in args.hp:
-        k, v = kv.split("=", 1)
-        cli_args += [f"--{k.replace('_', '-')}", v]
 
     session = Session(boto_session=boto, default_bucket=infra.bucket)
-    trainer = ModelTrainer(
-        sagemaker_session=session,
-        role=infra.role_arn,
-        base_job_name=f"sepsis-{args.model}",
-        training_image=args.image_uri or f"{infra.ecr_repository_url}:latest",
-        source_code=SourceCode(command="python -m sepsis.train", args=cli_args),
-        compute=Compute(
-            instance_type=args.instance_type,
-            instance_count=1,
-            volume_size_in_gb=10,
-            volume_kms_key_id=infra.kms_key_arn,
-            enable_managed_spot_training=not args.no_spot,
-        ),
-        networking=Networking(
-            subnets=infra.subnet_ids,
-            security_group_ids=[infra.security_group_id],
-            enable_network_isolation=True,
-        ),
-        stopping_condition=StoppingCondition(
-            max_runtime_in_seconds=1800,
-            max_wait_time_in_seconds=None if args.no_spot else 3600,
-        ),
-        output_data_config=OutputDataConfig(
-            s3_output_path=f"s3://{infra.bucket}/models/{args.model}",
-            kms_key_id=infra.kms_key_arn,
-        ),
-        tags=[
-            Tag(key="project", value="sepsis-sagemaker"),
-            Tag(key="owner", value=s.owner),
-            Tag(key="env", value="demo"),
-        ],
-    )
+    trainer = make_trainer(
+        session, s, infra, model=args.model, cli_args=hp_to_args(args.hp),
+        instance_type=args.instance_type, image_uri=args.image_uri, spot=not args.no_spot,
+    )  # fmt: skip
     trainer.train(
         input_data_config=[
             InputData(channel_name="train", data_source=f"{base}/train"),
