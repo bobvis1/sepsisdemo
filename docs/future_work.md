@@ -17,3 +17,9 @@ threshold alerts on 11-25% of patient-hours (about 2-4 false alarms per non-sept
 That is not a clinically usable alert burden. Future work: choose the threshold under a
 false-alarm budget (for example at most 0.5 alerts per patient-day) and report that operating
 point next to the utility-optimal one; consider alert de-duplication (refractory period).
+
+## SageMaker Clarify (Phase 9)
+Explainability and subgroup results were produced with XGBoost's exact TreeSHAP and the project's
+own evaluator (`sepsis.explain`), not SageMaker Clarify: Clarify is first on the plan's cut list,
+needs extra processing-instance quota and VPC wiring, and the fallback is the plan's stated
+alternative. Future work: run Clarify SHAP and bias reports as a pipeline step and compare.

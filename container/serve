@@ -1,0 +1,3 @@
+#!/bin/sh
+# SageMaker starts inference containers as `docker run <image> serve`.
+exec python -m sepsis.inference

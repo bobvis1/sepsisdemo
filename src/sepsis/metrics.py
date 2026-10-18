@@ -121,7 +121,8 @@ def per_patient_alert_stats(c: Cohort, alerts: np.ndarray) -> dict[str, np.ndarr
     first_pos = np.minimum.reduceat(np.where(c.y > 0, c.iculos, inf), c.offsets)
     onset = first_pos + ONSET_OFFSET
     septic = c.septic
-    lead = np.where(septic & (first_alert < onset), onset - first_alert, np.nan)
+    with np.errstate(invalid="ignore"):  # inf - inf for patients without onset/alerts is masked
+        lead = np.where(septic & (first_alert < onset), onset - first_alert, np.nan)
     return {
         "lead": lead,
         "alert_hours": np.add.reduceat(alerts.astype(np.float64), c.offsets),

@@ -49,6 +49,12 @@ def _logit(p: np.ndarray) -> np.ndarray:
     return np.log(p / (1 - p))[:, None]
 
 
+def platt_apply(p_raw: np.ndarray, coef: float, intercept: float) -> np.ndarray:
+    """Apply a fitted Platt sigmoid: sigmoid(coef * logit(p) + intercept)."""
+    z = coef * _logit(p_raw)[:, 0] + intercept
+    return 1.0 / (1.0 + np.exp(-z))
+
+
 class Platt:
     """Two-parameter sigmoid calibration, fit on hospital A validation only."""
 
