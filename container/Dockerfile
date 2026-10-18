@@ -17,7 +17,7 @@ COPY pyproject.toml /opt/sepsis/
 COPY src /opt/sepsis/src
 RUN pip install --no-deps /opt/sepsis
 
-# Run as non-root. SageMaker sets the entrypoint/command per job.
-RUN useradd --create-home --uid 1000 sepsis
-USER sepsis
-WORKDIR /home/sepsis
+# Runs as root on purpose: SageMaker mounts /opt/ml/processing/* and /opt/ml/model root-owned,
+# so a non-root user cannot write job output (PermissionError). Jobs run with network isolation
+# and carry no credentials. SageMaker sets the entrypoint/command per job.
+WORKDIR /opt/ml
