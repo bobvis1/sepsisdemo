@@ -1,0 +1,11 @@
+# Copy to config/settings.yaml (git-ignored) and edit. Single source of truth for
+# both Python code and Terraform (scripts/infra.sh renders infra/terraform.tfvars from it).
+aws_profile: claudeprofile
+region: us-east-2
+owner: your-name            # goes in the owner= tag on every resource
+name_prefix: sepsis         # prefix for resource names
+budget_usd: 50              # monthly AWS Budgets alarm threshold
+budget_email: you@example.com
+# Interface endpoints cost ~$0.01/hr/AZ each. Leave empty until a job proves it needs one.
+# Allowed: logs, sts, ecr.api, ecr.dkr, sagemaker.api, sagemaker.runtime
+interface_endpoints: []

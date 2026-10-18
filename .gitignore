@@ -1,0 +1,40 @@
+# Data and artifacts
+data/
+*.psv
+*.parquet
+*.tar.gz
+model_artifacts/
+outputs/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl.bak
+
+# Config with personal values / credentials
+config/settings.yaml
+.env
+*.pem
+.aws/
+
+# Local reference docs (cached, referenced repeatedly)
+docs_cache/
+
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+*.tfvars.json
+config/outputs.json
+
+# Claude Code local settings
+.claude/settings.local.json
