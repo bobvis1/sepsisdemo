@@ -1,0 +1,8 @@
+# Pinned to match uv.lock for local/cloud parity. Everything the jobs need must be baked in:
+# jobs run with network isolation, so runtime `pip install` fails.
+numpy==2.4.6
+pandas==3.0.6
+pyarrow==25.0.1
+scikit-learn==1.9.1
+joblib==1.6.0
+xgboost==3.2.0
