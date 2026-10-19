@@ -5,8 +5,8 @@ Phases 1-10: an interactive, single-page **results showcase** that presents the 
 external evaluation with some showmanship and no loss of rigor. It is written for an agent
 picking this up cold; everything it needs to know is here or in the files it names.
 
-Budget: about 3 hours of the user's time. No AWS resources are needed; everything runs locally
-and costs nothing.
+Budget: about 3.75 hours of the user's time (including about 0.75 hour for the browser test
+suite). No AWS resources are needed; everything runs locally and costs nothing.
 
 ## 1. What we are building and why
 
@@ -48,6 +48,9 @@ script enforces this (section 5, checks).
    so.
 5. Local first, small readable modules, ruff clean, type hints on public functions, pytest tests.
 6. Commit only when the user asks.
+7. **Ask the user for help** when a tool or access that would improve the work is missing
+   (a browser extension, an npm or Python package, a URL). Say what it is and what it would verify;
+   never skip a check silently. Details in section 4.
 
 ## 3. Inputs (all already on disk, all git-ignored)
 
@@ -81,11 +84,54 @@ read them from the file; the table above is just for orientation.
 ## 4. Environment notes
 
 - Tools are off the Bash PATH: prefix commands with
-  `export PATH=$HOME/.local/bin:/opt/homebrew/bin:$PATH`. Run Python via `uv run python`.
+  `export PATH=$HOME/.local/bin:/opt/homebrew/bin:$PATH` (add the Node directory below when you
+  need `node`). Run Python via `uv run python`.
 - XGBoost runs natively (libomp is installed).
-- Google Chrome is **not** installed, so there is no headless-browser screenshot. For visual
-  checks, publish the page as a private Artifact (section 9) and ask the user to look, or check
-  whether `node` exists (`command -v node`) and at least syntax-check the page's inline script.
+- **Google Chrome is installed** (155.0 at the time of writing, verified 2026-10-19) at
+  `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` (the path has spaces: quote it).
+  Verified from the Bash tool: headless runs the page's JavaScript, `--dump-dom` prints the DOM
+  after scripts ran, `--screenshot` writes a PNG, and `--enable-logging=stderr --v=0` prints
+  console output and uncaught errors as `INFO:CONSOLE` lines. Use it to check your own work
+  before asking the user to look:
+
+  ```
+  C="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  # screenshot at desktop or phone width (use scratchpad paths; file:// URL needs an absolute path)
+  "$C" --headless=new --disable-gpu --no-sandbox --window-size=1440,900 \
+       --force-device-scale-factor=2 --virtual-time-budget=4000 \
+       --screenshot=/abs/out.png file:///abs/outputs/showcase/index.html
+  # phone: --window-size=390,844 ; JS errors: add --enable-logging=stderr --v=0 and grep CONSOLE
+  ```
+
+  Then `Read` the PNG to look at it. `--virtual-time-budget=<ms>` lets timers and animations run
+  before the capture. A clean console (no `Uncaught` lines) is a required check in section 9.
+- **What headless Chrome from the CLI cannot do:** click, drag or type. To check interactive
+  states (threshold dragged, scene 3 mid-shift, replay at the alert hour, light/dark mode), build
+  small **URL hooks** into the page that set the state directly, for example
+  `?t=0.05&cohort=A&scene2=patient3&hour=18&seed=7&theme=dark&still=1` (`still=1` skips
+  animation and shows the end state). Screenshot each hook. These hooks are also handy for the
+  user.
+- **Node.js is installed (v24.22.0, npm and npx 11.19.1, via fnm) but off the Bash PATH**, like
+  the other tools. Verified 2026-10-19. Add it with
+  `export PATH=$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/bin:/opt/homebrew/bin:$PATH`
+  (`fnm` itself is not on the PATH; the `aliases/default` symlink points at the installed
+  version). Without that line `node`, `npm` and `npx` all report "not found", and `npm` fails with
+  "env: node: No such file or directory". Use Node for what Chrome's command line cannot do:
+  scripted clicks, drags and key presses with `puppeteer-core` driving the installed Chrome (no
+  browser download). These run as a **committed browser test suite in `showcase/tests/`**
+  (section 8.2); the user approved adding `puppeteer-core` there on 2026-10-19. Install it only
+  in that folder, never globally and nowhere else in the repo. Any *other* new npm or Python
+  package still needs the user's OK first (rule 7).
+  The page itself must not need Node: no build step. `showcase/tests/package.json` is the only
+  `package.json` in the repo, and it is for tests only.
+- **If something useful is missing, ask the user for help.** Do not silently skip a check, work
+  around a gap with a weaker substitute, or install tooling on your own. If a tool, permission,
+  package, browser feature or account access would make the work better (for example a font,
+  a second npm package for the tests, the Claude-in-Chrome extension
+  or the built-in browser pane for real interaction tests, a repo URL for the hero link), say
+  what it is, what it would let you verify, and the exact command or step the user would run,
+  then keep working on what you can. This also applies to anything blocked by the permission
+  classifier: explain what the command does and ask the user to run it.
 - Before writing any HTML, load the **`artifact-design`** and **`dataviz`** skills (Skill tool)
   and follow them: color tokens, light/dark handling, CDN rules, phone-width layout, colorblind-
   safe categorical palette.
@@ -247,10 +293,29 @@ script tag. Output: `outputs/showcase/index.html`, fully self-contained except f
 library.
 
 **Tech:** plain JavaScript and Canvas 2D for the dots and traces (20,000 animated SVG nodes is
-too slow). D3 v7 is allowed for scales/axes only, from cdnjs with an exact version
-(`https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js`); writing the few scales by hand
-is also fine. No build tooling, no frameworks. Handle `devicePixelRatio` for crisp canvases.
-Respect `prefers-reduced-motion` (skip animations, show end states).
+too slow). **Prefer hand-written scales and no external library**, so the built page is fully
+self-contained and the browser tests run offline. If D3 turns out to be worth it, use v7 for
+scales/axes only, from cdnjs with an exact version
+(`https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js`), and note in
+`showcase/tests/README.md` that the tests need network access. No build tooling, no frameworks.
+Handle `devicePixelRatio` for crisp canvases. Respect `prefers-reduced-motion` (skip
+animations, show end states).
+
+**Testability (required, the browser tests in section 8.2 depend on it):**
+
+- Stable `data-testid` attributes on every counter, button, toggle, the threshold handle, the
+  replay banner, the drivers card, and each tally value. Counters show plain numbers in their
+  text (formatting is fine, for example "543 of 1,142"), so tests read what a person reads.
+- The threshold handle is a real focusable control (`role="slider"` with `aria-valuenow`,
+  `aria-valuetext`), so drag and keyboard both work and tests can read its value.
+- The URL hooks from section 4 (`t`, `cohort`, `scene2`, `hour`, `seed`, `theme`, `still`), plus
+  `speed=<multiplier>` to run Scenes 2 and 3 fast.
+- A read-only `window.__showcase` object exposing what a canvas hides from the DOM: current
+  threshold, cohort, per-category dot counts as drawn, replay patient index and current hour,
+  shift seed and tally. Tests compare these against the visible counters, so the canvas and the
+  text cannot drift apart. Nothing in the page reads from it; it is for tests only.
+- `document.body.dataset.ready = "1"` once data is parsed and the first frame is drawn (and
+  intro animations are done or skipped), so tests wait on a signal instead of sleeping.
 
 **Look:** the `artifact-design` skill sets the contract. Within it, aim for a dark,
 clinical-monitor aesthetic for Scenes 2 and 3 (near-black panel, phosphor-style trace, mono
@@ -344,7 +409,12 @@ Works at 1440 px and at phone width (390 px, 16 px gutters, no horizontal scroll
 can shrink its height and dot radius). Canvases get `role="img"` and an `aria-label` summarizing
 the current state (for example "At threshold 3.3%: 543 of 1,142 septic patients caught early").
 
-## 8. Tests (`tests/test_showcase.py`), part of Phase V1
+## 8. Tests
+
+Two suites, one chain of trust: `evaluation.json` -> (Python build checks, section 5.4) ->
+`data.json` -> (browser tests, 8.2) -> what the page shows.
+
+### 8.1 Python unit tests (`tests/test_showcase.py`), part of Phase V1
 
 Use `tests/helpers.make_df` plus hand-built tiny cohorts with known answers.
 
@@ -361,10 +431,95 @@ Use `tests/helpers.make_df` plus hand-built tiny cohorts with known answers.
 
 Run `uv run pytest -q` and `uv run ruff check . && uv run ruff format --check .`.
 
+### 8.2 Browser tests (`showcase/tests/`), written alongside Phases V2-V3, about 0.75 hour
+
+Real clicks, drags and key presses against the built page, driven by `puppeteer-core` and the
+installed Chrome. They test the built page `outputs/showcase/index.html` and read expected values
+from `outputs/showcase/data.json`, so run the Python build first. Pytest does not run them; they
+have their own command.
+
+**Layout:**
+
+```
+showcase/tests/
+  package.json        # "private": true, "type": "module", engines node >=20,
+                      # "scripts": {"test": "node --test --test-concurrency=1"}
+  package-lock.json   # committed; installs with `npm ci`
+  .npmrc              # ignore-scripts=true (no install scripts run; puppeteer-core needs none)
+  README.md           # what the tests cover, how to run them, CHROME_PATH, prerequisites
+  helpers.js          # launch browser, open page with URL hooks, wait for data-ready, read data.json
+  showcase.test.js    # the tests below (split into scene files if it passes ~300 lines)
+```
+
+**Dependencies:** `puppeteer-core` only, at an exact version (`npm install --save-exact`),
+using Node's built-in `node:test` and `node:assert` (no Jest or Mocha). Choose the latest
+release that is at least two weeks old (`npm view puppeteer-core time --json`) and check that it
+drives the installed Chrome (155). After installing, run `npm audit` and report the result to the
+user. Do **not** use the `puppeteer` package: it downloads its own Chrome.
+
+**Chrome path:** `process.env.CHROME_PATH`, defaulting to the macOS path in section 4. If
+neither exists, fail with a clear message that says to set `CHROME_PATH` (do not silently skip).
+Launch headless with `--no-sandbox` only if needed, one browser per test file, a fresh page per
+test.
+
+**Speed:** open pages with `still=1` or `speed=50` and wait on `body[data-ready="1"]`. No fixed
+sleeps longer than an animation frame. The full suite should finish in under a minute.
+
+**Tests (each one small and named after what it proves):**
+
+1. **Loads clean:** no `pageerror` events and no `console.error` messages, at 1440x900 and
+   390x844.
+2. **Phone layout:** at 390 px, `document.documentElement.scrollWidth <= innerWidth` (no
+   horizontal scroll), and every scene is visible when scrolled to.
+3. **Default numbers match the evaluation:** with no URL hooks, the Scene 1 counters show the
+   grid row for the hospital A threshold in `data.json` (caught early 543 of 1,142, false alarms
+   per patient-day, utility, median lead time), the hero numbers match `data.json` meta, and
+   `window.__showcase` dot counts equal the counter text.
+4. **Dragging the threshold:** drag the handle right with real mouse events
+   (`page.mouse.down/move/up`). The handle's `aria-valuenow` goes up, the caught-early and
+   false-alarm counts do not go up, and every counter equals the `data.json` grid row for the new
+   threshold. Then drag left past the start and check the opposite.
+5. **Keyboard:** focus the handle, press ArrowRight three times, and the threshold moves exactly
+   three grid points. Counters match that grid row.
+6. **Reset:** after a drag, the reset button returns to the hospital A threshold and the
+   default numbers.
+7. **Cohort toggle:** switching to hospital A shows 4,067 patients and the hospital A grid
+   values; switching back restores hospital B.
+8. **URL hooks:** `?t=<grid value>&cohort=A&still=1` opens in that state (same numbers as getting
+   there by clicking).
+9. **Replay:** for each of the 10 replay patients (next button), playing to the end with
+   `speed=50` shows the banner that matches its category, and for early catches the banner's hours
+   equal `lead_h` in `data.json`. The drivers card shows three named variables when the alert
+   fires.
+10. **Night shift is reproducible and honest:** the same `seed` run twice gives an identical
+    tally; under the 0.5 false-alarm budget threshold, "alert episodes started" is at most what
+    the utility-optimal threshold gives for the same seed.
+11. **Reduced motion and dark mode:** with `page.emulateMediaFeatures` for
+    `prefers-reduced-motion: reduce`, the page is ready with no intro animation; with
+    `prefers-color-scheme: dark` (and `theme=dark`), the computed body background changes and the
+    dot colors still come from the dark-mode tokens.
+12. **Screenshots for review (not assertions):** save PNGs of the hero, each scene and the
+    footer at both widths and in both themes to `outputs/showcase/screens/` (git-ignored). Read
+    them yourself in Phase V4.
+
+**Run:**
+
+```
+export PATH=$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/bin:/opt/homebrew/bin:$PATH
+make showcase                       # Python build: data.json + index.html
+npm --prefix showcase/tests ci
+npm --prefix showcase/tests test
+```
+
 ## 9. Phase V4: build, verify, publish, about 0.5 hour
 
 1. Run the full build (command in section 5). Paste the consistency-check table in the report.
 2. Check `outputs/showcase/index.html` size (target under 4 MB).
+   Run the browser tests (section 8.2) and paste the `node --test` summary. All must pass.
+   Then look at the screenshots from test 12 and fix anything that looks wrong (overlaps,
+   clipped labels, unreadable colors in dark mode). The headless Chrome CLI in section 4 is
+   still useful for a quick look while developing. Report which checks you ran and what you
+   could not check.
 3. Publish `outputs/showcase/index.html` with the Artifact tool as a **private** artifact (icon
    "chart"). The data is derived from an open, de-identified CC BY 4.0 dataset, so a private
    link is fine; the user decides whether to share it. Give the user the link and ask them to
@@ -374,11 +529,15 @@ Run `uv run pytest -q` and `uv run ruff check . && uv run ruff format --check .`
 
 ## 10. Phase V5: wire into the repo, about 0.25 hour
 
-- `Makefile`: add `showcase:` target running the build command (not billable).
-- `README.md`: a short "Results showcase" section (2-3 sentences, the build command, and the
-  artifact link if the user wants it public in the README; ask before adding the link).
-- `.gitignore`: nothing new needed (`outputs/` is already ignored). The template and module are
-  committed; the built HTML is not.
+- `Makefile`: add `showcase:` (the Python build) and `showcase-test:` (`npm --prefix
+  showcase/tests ci && npm --prefix showcase/tests test`, depending on `showcase`) targets, both
+  with `##` help text like the existing ones. Not billable.
+- `README.md`: a short "Results showcase" section (2-3 sentences, the build and test commands,
+  the Node and Chrome prerequisites for the browser tests, and the artifact link if the user wants
+  it public in the README; ask before adding the link).
+- `.gitignore`: add `node_modules/`. (`outputs/`, which holds the built page and screenshots, is
+  already ignored.) The template, the module and `showcase/tests/` (including
+  `package-lock.json`) are committed; the built HTML is not.
 - `docs/future_work.md`: add anything cut (for example Scene 4, an animated GIF for the README,
   live scoring of the replay through the serverless endpoint).
 
@@ -388,8 +547,10 @@ Run `uv run pytest -q` and `uv run ruff check . && uv run ruff format --check .`
 |---|---|
 | `src/sepsis/showcase.py` | new: scoring, per-patient fields, sina layout, grid, replay/pool/wall export, checks, template injection, CLI |
 | `showcase/template.html` | new: the page |
-| `tests/test_showcase.py` | new |
-| `Makefile` | add `showcase` target |
+| `tests/test_showcase.py` | new: Python unit tests |
+| `showcase/tests/` | new: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `helpers.js`, `showcase.test.js` |
+| `Makefile` | add `showcase` and `showcase-test` targets |
+| `.gitignore` | add `node_modules/` |
 | `README.md` | short section |
 | `docs/future_work.md` | cut items |
 | `VIZ_PLAN.md` | this file |
@@ -403,13 +564,15 @@ be useful (for example a public `peak_pre` function), add it in `showcase.py` in
 2. Hospital A toggle in Scene 1 (keep B only; keep the A threshold markers)
 3. Vitals strips in Scene 2 (keep risk trace, alert, onset, drivers)
 4. Scene 3 speed control and threshold selector (keep one threshold)
+5. Browser tests 9-11 (keep 1-8 and the screenshots in 12)
 
-Never cut: the consistency checks, the "chosen on hospital A" labelling, the selection-rule
-caption, the footer disclaimer and attribution.
+Never cut: the consistency checks, browser tests 1-8, the "chosen on hospital A" labelling, the
+selection-rule caption, the footer disclaimer and attribution.
 
 ## 13. Reporting
 
 At the end of each phase report what was done, how it was verified (command plus output), and
 any surprises, then continue unless the user has asked to pause between phases. When finished,
-report: the artifact link, the consistency-check table, the hospital B results at the 0.5
+report: the artifact link, the consistency-check table, the browser-test summary and the
+`npm audit` result, the hospital B results at the 0.5
 false-alarm budget threshold (new information the user has not seen), and anything cut.
