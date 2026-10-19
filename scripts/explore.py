@@ -161,7 +161,7 @@ def main() -> None:
     out.append(
         "Hospital-level differences in measurement frequency are expected to be a main source "
         "of A-to-B distribution shift; missingness indicators and time-since-measurement "
-        "features (Phase 3) carry this information."
+        "features carry this information."
     )
 
     # Integrity checks the feature code will rely on

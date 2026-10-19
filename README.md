@@ -8,6 +8,39 @@ than a model with state-of-the-art performance.
 
 > **Research demonstration only. Not a medical device and not for clinical use.**
 
+## For reviewers
+
+A five-minute tour:
+
+- **What it is.** An hourly sepsis early-warning model trained on one hospital system and tested on
+  a second it never saw (20,000 patients), built end to end on Amazon SageMaker in a locked-down AWS
+  account.
+- **Secure environment as code.** Terraform ([infra/](infra/)) builds a private VPC with no internet
+  route, a customer-managed KMS key, least-privilege IAM, an ECR repository and a budget alarm. Every
+  training, processing and transform job runs with network isolation.
+- **One container for every stage.** A single Docker image ([container/](container/)) runs feature
+  building, training, evaluation and serving, so the same code computes features offline and at
+  inference.
+- **SageMaker end to end.** Processing and Training jobs, a 20-trial Bayesian tuning job, a Pipeline
+  that registers the model only if it beats a logistic-regression baseline, Model Registry with
+  manual approval, a serverless endpoint, Batch Transform (scores match offline evaluation to within
+  4e-8) and managed MLflow.
+- **Evaluation that does not flatter the model.** Patient-level splits, causal features (tested),
+  nothing tuned on the external hospital, patient-level bootstrap CIs, the official challenge scoring
+  code, and alert-burden and warning-window metrics next to AUROC. See [Results](#results) and the
+  [model card](docs/model_card.md).
+- **Standards for others to follow.** [docs/lab_standards.md](docs/lab_standards.md) is a one-page
+  convention for naming, tagging, encryption, network isolation, identity, cost and adding a model.
+- **Cost.** About $5 of AWS spend for the whole project (estimate; see [Cost](#cost)), and
+  `scripts/teardown.sh` removes everything.
+
+**How it was built.** I used [Claude Code](https://www.anthropic.com/claude-code) as a pair
+programmer. I set the methodological rules and the security and cost guardrails in
+[CLAUDE.md](CLAUDE.md) and the plan in [PLAN.md](PLAN.md), then worked through the plan step by
+step, reviewing the code and verifying each stage on AWS before moving on. Unit tests enforce the
+rules (patient-level splits, causal features, patient-level bootstrap). Both files are left in the
+repository so the process is visible.
+
 ## Interactive results
 
 [**Open the interactive results showcase**](https://claude.ai/artifact/LomV6yVikEbVgJqK6SfRRR): drag the
@@ -91,9 +124,9 @@ inference, so the same `features.py` is used offline and at serving time.
 ## Results
 
 <!-- results:headline:start -->
-_Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m70 (package v3, the deployed one), which produced identical metrics; XGBoost with Phase 5 tuned hyperparameters. 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
+_Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m70 (package v3, the deployed one), which produced identical metrics; XGBoost with hyperparameters from the 20-trial tuning job. The two 12 h window rows were added after the AWS environment was torn down: for XGBoost by re-running the current evaluation code on the registered model (every other metric reproduces to the precision shown), for logistic regression on a local training run of the same code (its other metrics differ from the pipeline's by at most 0.002). 95% CIs from 1000 patient-level bootstrap resamples. Early stopping, hyperparameter tuning, calibration and the alert threshold all used hospital A validation, so its numbers are optimistic; hospital B is an untouched external test set._
 
-| Metric | XGBoost, A validation | XGBoost, B (external) | Logistic regression, A validation | Logistic regression, B |
+| Metric | XGBoost, A validation (selection set, optimistic) | XGBoost, B (external) | Logistic regression, A validation (selection set, optimistic) | Logistic regression, B |
 |---|---|---|---|---|
 | Patients (septic) | 4,067 (358) | 20,000 (1,142) | 4,067 (358) | 20,000 (1,142) |
 | Hour prevalence | 0.0216 | 0.0141 | 0.0216 | 0.0141 |
@@ -101,8 +134,9 @@ _Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m7
 | AUPRC | 0.132 (0.111-0.157) | 0.072 (0.065-0.081) | 0.097 (0.087-0.115) | 0.049 (0.045-0.056) |
 | Brier (calibrated) | 0.020 (0.018-0.022) | 0.014 (0.013-0.014) | 0.020 (0.018-0.022) | 0.015 (0.014-0.017) |
 | Challenge utility (normalised) | 0.399 (0.355-0.439) | 0.245 (0.222-0.268) | 0.332 (0.287-0.372) | 0.193 (0.168-0.218) |
-| Median lead time, h | 36.5 (29.0-44.5) | 33.0 (29.0-39.0) | 38.0 (30.0-45.0) | 30.0 (26.0-37.0) |
-| Septic patients alerted before onset | 0.732 (0.686-0.778) | 0.475 (0.448-0.504) | 0.737 (0.693-0.783) | 0.593 (0.564-0.620) |
+| Septic patients alerted before onset (any time) | 0.732 (0.686-0.778) | 0.475 (0.448-0.504) | 0.737 (0.693-0.783) | 0.593 (0.564-0.620) |
+| Septic patients alerted in the 12 h before onset | 0.693 (0.645-0.741) | 0.433 (0.406-0.462) | 0.701 (0.657-0.748) | 0.558 (0.529-0.586) |
+| Of those alerted before onset, first alert > 24 h early | 0.611 (0.550-0.672) | 0.593 (0.551-0.632) | 0.621 (0.558-0.680) | 0.552 (0.514-0.587) |
 | False alarms per non-septic patient-day | 2.34 (2.17-2.50) | 0.79 (0.71-0.88) | 2.98 (2.81-3.15) | 2.07 (1.97-2.18) |
 
 XGBoost alert threshold: 0.0332 (calibrated probability).
@@ -112,8 +146,16 @@ Reading the table: discrimination and utility are lower on hospital B, the expec
 Hour prevalence also differs (A 2.2%, B 1.4%), so AUPRC is not comparable across hospitals; compare
 each against its own prevalence. The alert threshold maximises the challenge utility, which charges
 very little for false alarms. On hospital A it alerts on 16% of patient-hours (2.3 false alarms per
-non-septic patient-day) and still alerts before onset for only 73% of septic patients; on B it
-alerts on 6% of hours (0.8 per patient-day) and reaches 48%. That is not a clinically usable trade-off (see [docs/future_work.md](docs/future_work.md)).
+non-septic patient-day), and 69% of septic patients have an alert in the 12 hours before onset; on
+B it alerts on 6% of hours (0.8 per patient-day) and reaches 43%. That is not a clinically usable
+trade-off (see [docs/future_work.md](docs/future_work.md)).
+
+Lead time needs care. Measured from each septic patient's first alert, the median lead time on
+hospital B is 33 hours, but for 59% of alerted patients that first alert came more than a day before
+onset. The model flags patients who already look sick and keeps alerting, so time since the first
+alert measures how long the alert stayed on, not how far ahead the model anticipated sepsis. The
+table therefore reports whether an alert fired in the 12 hours before onset (the window the
+challenge's utility function rewards) instead of a median lead time.
 
 ### What drives the model (XGBoost, SHAP)
 
@@ -145,7 +187,7 @@ uv run python scripts/consolidate.py --upload             # after scripts/downlo
 uv run python scripts/explore.py                          # -> docs/data_summary.md
 uv run python -m sepsis.process --input data/parquet --output data/features
 scripts/push_image.sh                                     # build + push the custom image
-uv run python scripts/run_processing.py --compare-local data/features   # Phase 3 acceptance
+uv run python scripts/run_processing.py --compare-local data/features   # cloud features == local
 uv run python -m sepsis.train --model xgboost --train data/features/train \
     --validation data/features/validation --model-dir outputs/xgboost_full
 uv run python -m sepsis.evaluate --model-dir outputs/xgboost_full --features data/features \

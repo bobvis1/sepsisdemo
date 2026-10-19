@@ -13,7 +13,7 @@ export PATH=$HOME/.local/share/fnm/aliases/default/bin:$PATH
 
 # 1. build the page and its data (Python, writes outputs/showcase/)
 uv run python -m sepsis.showcase --model-dir outputs/pipe2/model \
-    --evaluation outputs/pipe2/eval_xgboost --features data/features \
+    --evaluation outputs/final/eval_xgboost --features data/features \
     --template showcase/template.html --out outputs/showcase
 
 # 2. install and test

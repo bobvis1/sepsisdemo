@@ -1,4 +1,4 @@
-"""Deploy the latest Approved model as a SERVERLESS endpoint, invoke it, and delete it (Phase 8).
+"""Deploy the latest Approved model as a SERVERLESS endpoint, invoke it, and delete it.
 
     uv run python scripts/deploy_endpoint.py                 # up, invoke the sample, down
     uv run python scripts/deploy_endpoint.py --keep          # leave it running (delete it yourself)

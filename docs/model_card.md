@@ -38,9 +38,9 @@ hospital B. The threshold maximises the challenge's normalised utility score (of
 vendored unmodified). CIs: percentile bootstrap, patients resampled.
 
 <!-- results:headline:start -->
-_Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m70 (package v3, the deployed one), which produced identical metrics; XGBoost with Phase 5 tuned hyperparameters. 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
+_Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m70 (package v3, the deployed one), which produced identical metrics; XGBoost with hyperparameters from the 20-trial tuning job. The two 12 h window rows were added after the AWS environment was torn down: for XGBoost by re-running the current evaluation code on the registered model (every other metric reproduces to the precision shown), for logistic regression on a local training run of the same code (its other metrics differ from the pipeline's by at most 0.002). 95% CIs from 1000 patient-level bootstrap resamples. Early stopping, hyperparameter tuning, calibration and the alert threshold all used hospital A validation, so its numbers are optimistic; hospital B is an untouched external test set._
 
-| Metric | XGBoost, A validation | XGBoost, B (external) | Logistic regression, A validation | Logistic regression, B |
+| Metric | XGBoost, A validation (selection set, optimistic) | XGBoost, B (external) | Logistic regression, A validation (selection set, optimistic) | Logistic regression, B |
 |---|---|---|---|---|
 | Patients (septic) | 4,067 (358) | 20,000 (1,142) | 4,067 (358) | 20,000 (1,142) |
 | Hour prevalence | 0.0216 | 0.0141 | 0.0216 | 0.0141 |
@@ -48,12 +48,16 @@ _Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m7
 | AUPRC | 0.132 (0.111-0.157) | 0.072 (0.065-0.081) | 0.097 (0.087-0.115) | 0.049 (0.045-0.056) |
 | Brier (calibrated) | 0.020 (0.018-0.022) | 0.014 (0.013-0.014) | 0.020 (0.018-0.022) | 0.015 (0.014-0.017) |
 | Challenge utility (normalised) | 0.399 (0.355-0.439) | 0.245 (0.222-0.268) | 0.332 (0.287-0.372) | 0.193 (0.168-0.218) |
-| Median lead time, h | 36.5 (29.0-44.5) | 33.0 (29.0-39.0) | 38.0 (30.0-45.0) | 30.0 (26.0-37.0) |
-| Septic patients alerted before onset | 0.732 (0.686-0.778) | 0.475 (0.448-0.504) | 0.737 (0.693-0.783) | 0.593 (0.564-0.620) |
+| Septic patients alerted before onset (any time) | 0.732 (0.686-0.778) | 0.475 (0.448-0.504) | 0.737 (0.693-0.783) | 0.593 (0.564-0.620) |
+| Septic patients alerted in the 12 h before onset | 0.693 (0.645-0.741) | 0.433 (0.406-0.462) | 0.701 (0.657-0.748) | 0.558 (0.529-0.586) |
+| Of those alerted before onset, first alert > 24 h early | 0.611 (0.550-0.672) | 0.593 (0.551-0.632) | 0.621 (0.558-0.680) | 0.552 (0.514-0.587) |
 | False alarms per non-septic patient-day | 2.34 (2.17-2.50) | 0.79 (0.71-0.88) | 2.98 (2.81-3.15) | 2.07 (1.97-2.18) |
 
 XGBoost alert threshold: 0.0332 (calibrated probability).
 <!-- results:headline:end -->
+
+The A validation columns are optimistic: early stopping, hyperparameter tuning, calibration and
+the threshold were all chosen on that set. Hospital B is the honest estimate.
 
 How to read it: the model ranks risk well above chance on both hospitals (AUROC about 0.79 to
 0.81 for XGBoost) and beats the baseline. Performance is lower on the external hospital.
@@ -67,7 +71,7 @@ and the intervals overlap), so it should be treated as unconfirmed, not as a fin
 mean few septic patients in a subgroup.
 
 <!-- results:subgroups:start -->
-| Group | A validation: patients (septic) | A AUPRC | A utility | B: patients (septic) | B AUPRC | B utility |
+| Group | A validation (selection set, optimistic): patients (septic) | A AUPRC | A utility | B: patients (septic) | B AUPRC | B utility |
 |---|---|---|---|---|---|---|
 | age <40 | 400 (35) | 0.170 (0.089-0.297) | 0.385 (0.242-0.504) | 2,347 (130) | 0.070 (0.051-0.099) | 0.244 (0.178-0.314) |
 | age 40-59 | 1,203 (92) | 0.130 (0.093-0.172) | 0.396 (0.300-0.479) | 6,392 (359) | 0.068 (0.058-0.083) | 0.246 (0.210-0.291) |
@@ -104,9 +108,13 @@ tests differently.
 - **Distribution shift.** Discrimination and utility drop on hospital B; AUPRC falls by almost half. Expect further
   degradation elsewhere. Calibration was fit on hospital A and is imperfect on B.
 - **Alert burden.** The utility-optimal threshold alerts on 16% of patient-hours in A (2.3 false
-  alarms per non-septic patient-day) and 6% in B (0.8), yet only 73% and 48% of septic patients
-  are alerted before onset. The threshold was fit on A, so B is conservative. A clinical deployment
-  would need an explicit false-alarm budget.
+  alarms per non-septic patient-day) and 6% in B (0.8), yet only 69% and 43% of septic patients
+  have an alert in the 12 hours before onset. The threshold was fit on A, so B is conservative. A
+  clinical deployment would need an explicit false-alarm budget.
+- **Lead time.** For about 60% of septic patients alerted before onset, the first alert came more
+  than 24 hours early: the model flags patients who already look sick and keeps alerting. Median
+  time from first alert to onset (33 h on B) therefore overstates how far ahead the model
+  anticipates sepsis, so the tables report alerts within the 12 hours before onset instead.
 - **Input contract.** The serving code assumes one row per ICU hour with no gaps; gaps are rejected.
 - **Fairness.** Only age band and sex were examined; race, ethnicity and insurance are not in the
   data, so disparities along those axes could not be checked.

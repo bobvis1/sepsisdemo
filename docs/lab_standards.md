@@ -26,7 +26,7 @@ never committed keys. The deployer policy (`infra/iam/deployer-policy.json`) is 
 region-pinned. Jobs use a separate execution role limited to the project bucket, key, logs and job
 APIs. No account IDs, ARNs or credentials are committed; they come from `config/` (git-ignored).
 
-**Cost.** Ask before creating anything billable. Prefer Spot training, serverless inference and
+**Cost.** Notify when creating anything billable. Prefer Spot training, serverless inference and
 Batch Transform over always-on endpoints. Optional hourly services (managed MLflow) are behind a
 flag that defaults to off. A monthly AWS Budgets alarm is part of the base stack. Request instance
 quotas early: new accounts often have zero training and transform quota, and approval can take a day.

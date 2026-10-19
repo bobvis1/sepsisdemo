@@ -15,10 +15,10 @@ tf-apply:        ## terraform apply (BILLABLE, ask first)
 	scripts/infra.sh apply
 whoami:          ## verify AWS credentials for the configured profile
 	$(PY) scripts/whoami.py
-smoke:           ## trivial isolated Processing job in the VPC (Phase 1 acceptance)
+smoke:           ## trivial isolated Processing job in the VPC (smoke test)
 	$(PY) scripts/smoke_processing_job.py
 showcase:        ## build the results page and its data into outputs/showcase (local, free)
-	$(PY) -m sepsis.showcase --model-dir outputs/pipe2/model --evaluation outputs/pipe2/eval_xgboost \
+	$(PY) -m sepsis.showcase --model-dir outputs/pipe2/model --evaluation outputs/final/eval_xgboost \
 	    --features data/features --template showcase/template.html --out outputs/showcase
 showcase-test: showcase  ## rebuild, then browser tests of the page (Node 22.12+ and Chrome)
 	PATH="$$HOME/.local/share/fnm/aliases/default/bin:$$PATH" npm --prefix showcase/tests ci

@@ -63,7 +63,7 @@ export function expectedCounters(cohort, ti) {
     "metric-threshold": riskPct(D.thresholds[ti]),
     "metric-fa": g.false_alarms_per_patient_day.toFixed(2),
     "metric-utility": g.utility.toFixed(3),
-    "metric-lead": g.median_lead_time_h == null ? "n/a" : `${g.median_lead_time_h} h`,
+    "metric-window": pct(g.septic_alerted_in_window),
   };
 }
 export async function readCounters(page) {

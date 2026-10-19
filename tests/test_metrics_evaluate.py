@@ -81,6 +81,23 @@ def test_lead_time_and_false_alarms():
     # cohort order is sorted by patient id: "n" (non-septic) then "s" (septic)
     assert st["lead"][1] == 3 and np.isnan(st["lead"][0])
     assert 24 * st["alert_hours"][0] / st["hours"][0] == pytest.approx(6.0)
+    assert list(st["warned_in_window"]) == [False, True]
+
+
+def test_warning_window_ignores_alerts_only_long_before_onset():
+    # onset at ICULOS 41 (label from 35); window is ICULOS 29-40
+    n = 45
+    df = pd.DataFrame(
+        {"patient_id": ["early"] * n + ["held"] * n, "ICULOS": list(range(1, n + 1)) * 2,
+         "SepsisLabel": ([0] * 34 + [1] * 11) * 2, "p": 0.0}
+    )  # fmt: skip
+    df.loc[(df.patient_id == "early") & (df.ICULOS <= 5), "p"] = 1.0  # alert only on admission
+    df.loc[(df.patient_id == "held") & (df.ICULOS >= 3), "p"] = 1.0  # alert from 3, held on
+    c = M.make_cohort(df, df["p"].to_numpy())
+    st = M.per_patient_alert_stats(c, (c.p >= 0.5).astype(np.int8))
+    # sorted ids: "early" then "held"; both count as alerted before onset with lead 40 / 38 h
+    assert list(st["lead"]) == [40, 38]
+    assert list(st["warned_in_window"]) == [False, True]
 
 
 def test_bootstrap_resamples_patients_not_rows():

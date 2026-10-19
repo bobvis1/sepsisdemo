@@ -1,4 +1,4 @@
-# SageMaker managed MLflow tracking server (Phase 4+). Created only when enable_mlflow = true.
+# SageMaker managed MLflow tracking server. Created only when enable_mlflow = true.
 # Billed per hour while it exists (Small is ~$0.60/hr): apply for a working session, destroy after.
 # Artifacts go under s3://<bucket>/mlflow/ in the project bucket, encrypted with the project KMS key.
 # Training jobs run with network isolation and cannot reach MLflow; metrics are logged from the

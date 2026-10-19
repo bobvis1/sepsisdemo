@@ -95,7 +95,7 @@ These patients cannot be warned in advance: the label is already positive when t
 | Fibrinogen | 99.2 | 99.4 |
 | Platelets | 93.5 | 94.7 |
 
-Hospital-level differences in measurement frequency are expected to be a main source of A-to-B distribution shift; missingness indicators and time-since-measurement features (Phase 3) carry this information.
+Hospital-level differences in measurement frequency are expected to be a main source of A-to-B distribution shift; missingness indicators and time-since-measurement features carry this information.
 
 ## Data integrity checks
 

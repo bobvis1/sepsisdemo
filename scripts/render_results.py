@@ -16,13 +16,15 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+A_VAL = "A validation (selection set, optimistic)"
 ROWS = [
     ("auroc", "AUROC"),
     ("auprc", "AUPRC"),
     ("brier_calibrated", "Brier (calibrated)"),
     ("utility", "Challenge utility (normalised)"),
-    ("median_lead_time_h", "Median lead time, h"),
-    ("septic_alerted_before_onset", "Septic patients alerted before onset"),
+    ("septic_alerted_before_onset", "Septic patients alerted before onset (any time)"),
+    ("septic_alerted_in_window", "Septic patients alerted in the 12 h before onset"),
+    ("first_alert_over_24h_early", "Of those alerted before onset, first alert > 24 h early"),
     ("false_alarms_per_patient_day", "False alarms per non-septic patient-day"),
 ]
 
@@ -35,11 +37,12 @@ def headline(evs: dict[str, dict], source: str) -> str:
     x = evs["xgboost"]
     L = [
         f"_Source: {source}. 95% CIs from {x['n_bootstrap']} patient-level bootstrap resamples. "
-        "Calibration and alert threshold fit on hospital A validation only; hospital B is an "
-        "untouched external test set._",
+        "Early stopping, hyperparameter tuning, calibration and the alert threshold all used "
+        "hospital A validation, so its numbers are optimistic; hospital B is an untouched "
+        "external test set._",
         "",
-        "| Metric | XGBoost, A validation | XGBoost, B (external) "
-        "| Logistic regression, A validation | Logistic regression, B |",
+        f"| Metric | XGBoost, {A_VAL} | XGBoost, B (external) "
+        f"| Logistic regression, {A_VAL} | Logistic regression, B |",
         "|---|---|---|---|---|",
     ]
     a, b = x["hospital_A_validation"], x["hospital_B"]
@@ -55,7 +58,7 @@ def headline(evs: dict[str, dict], source: str) -> str:
         f"| {a['hour_prevalence']:.4f} | {b['hour_prevalence']:.4f} |"
     )
     for key, label in ROWS:
-        d = 1 if key == "median_lead_time_h" else 2 if key.startswith("false_alarms") else 3
+        d = 2 if key.startswith("false_alarms") else 3
         cells = [
             ci(ev[h]["metrics"][key], d)
             for ev in (x, base)
@@ -77,7 +80,7 @@ def shap_block(ex: dict) -> str:
 
 def subgroup_block(ex: dict) -> str:
     L = [
-        "| Group | A validation: patients (septic) | A AUPRC | A utility | B: patients (septic)"
+        f"| Group | {A_VAL}: patients (septic) | A AUPRC | A utility | B: patients (septic)"
         " | B AUPRC | B utility |",
         "|---|---|---|---|---|---|---|",
     ]

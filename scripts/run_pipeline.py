@@ -3,7 +3,7 @@
     uv run python scripts/run_pipeline.py                 # dry run: build + validate the definition
     uv run python scripts/run_pipeline.py --upsert        # create/update the pipeline (free)
     uv run python scripts/run_pipeline.py --upsert --start   # also run it (billable: see below)
-    uv run python scripts/run_pipeline.py --tuned --upsert --start   # XGBoost uses the Phase 5 best
+    uv run python scripts/run_pipeline.py --tuned --upsert --start   # XGBoost: best tuned params
 
 A full execution runs 1 Processing + 2 Training (Spot) + 2 Processing jobs: roughly $0.05-0.10.
 Pin the image with --image-tag <git sha> (scripts/push_image.sh prints it); default is :latest.

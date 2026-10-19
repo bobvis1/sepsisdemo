@@ -1,7 +1,7 @@
 """Run the feature-engineering Processing job (src/sepsis/process.py) on SageMaker.
 
 Custom image, private VPC, network isolation, KMS-encrypted volume and output. Then, with
---compare-local, download the output and check it equals a local run (Phase 3 acceptance).
+--compare-local, download the output and check it equals a local run.
 
     uv run python scripts/run_processing.py --compare-local data/features
 Cost: one ml.t3.large for a few minutes (about $0.01); ml.m5 quotas default to 0.

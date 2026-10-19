@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 ONSET_OFFSET = 6  # label is 1 from 6 h before clinical onset: onset = first label-1 hour + 6
+WARN_WINDOW = 12  # actionable warning window, h before onset (the challenge rewards from -12 h)
 
 
 @cache
@@ -114,17 +115,25 @@ def normalized_utility(
 
 
 def per_patient_alert_stats(c: Cohort, alerts: np.ndarray) -> dict[str, np.ndarray]:
-    """Per-patient: lead time (h, NaN unless septic and first alert before onset), alert hours,
-    hours, and whether the patient was positive at their first row."""
+    """Per-patient: lead time (h, NaN unless septic and first alert before onset), whether an
+    alert fired in the WARN_WINDOW hours before onset, alert hours, hours, and whether the
+    patient was positive at their first row.
+
+    `lead` counts from the first alert any time before onset, so a patient flagged on admission
+    two days before onset gets 48 h even if the model was not anticipating sepsis then;
+    `warned_in_window` only credits alerts close enough to onset to act on."""
     inf = np.inf
     first_alert = np.minimum.reduceat(np.where(alerts > 0, c.iculos, inf), c.offsets)
     first_pos = np.minimum.reduceat(np.where(c.y > 0, c.iculos, inf), c.offsets)
     onset = first_pos + ONSET_OFFSET
+    onset_row = onset[c.codes]
+    in_window = (alerts > 0) & (c.iculos >= onset_row - WARN_WINDOW) & (c.iculos < onset_row)
     septic = c.septic
     with np.errstate(invalid="ignore"):  # inf - inf for patients without onset/alerts is masked
         lead = np.where(septic & (first_alert < onset), onset - first_alert, np.nan)
     return {
         "lead": lead,
+        "warned_in_window": septic & np.logical_or.reduceat(in_window, c.offsets),
         "alert_hours": np.add.reduceat(alerts.astype(np.float64), c.offsets),
         "hours": c.rows_per_patient.astype(np.float64),
         "septic": septic,

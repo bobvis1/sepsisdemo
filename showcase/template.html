@@ -193,8 +193,8 @@ footer strong { color: var(--ink); }
     <p class="lede">An hourly early-warning model trained on one hospital and tested, untouched, on 20,000 patients from another.</p>
     <div class="stats">
       <div class="stat"><b data-testid="hero-patients" id="hero-patients">–</b><span>patients evaluated at the external hospital</span></div>
-      <div class="stat"><b data-testid="hero-caught" id="hero-caught">–</b><span>of septic patients alerted before onset</span></div>
-      <div class="stat"><b data-testid="hero-lead" id="hero-lead">–</b><span>median warning before clinical onset</span></div>
+      <div class="stat"><b data-testid="hero-caught" id="hero-caught">–</b><span>of septic patients alerted before onset, at any time</span></div>
+      <div class="stat"><b data-testid="hero-window" id="hero-window">–</b><span>of septic patients alerted in the 12 hours before onset</span></div>
       <div class="stat"><b data-testid="hero-fa" id="hero-fa">–</b><span>false alarms per non-septic patient-day</span></div>
     </div>
     <p class="fine">Trained, registered and served on Amazon SageMaker. Hospital A trained and tuned the model; hospital B was never used to choose anything. <a href="https://github.com/bobvis1/sepsisdemo" target="_blank" rel="noopener">Read the full project on GitHub</a>.</p>
@@ -208,7 +208,7 @@ footer strong { color: var(--ink); }
     <div class="controls">
       <div class="seg" role="group" aria-label="Hospital">
         <button type="button" id="cohort-B" data-testid="cohort-B" aria-pressed="true">Hospital B · external test</button>
-        <button type="button" id="cohort-A" data-testid="cohort-A" aria-pressed="false">Hospital A · validation</button>
+        <button type="button" id="cohort-A" data-testid="cohort-A" aria-pressed="false">Hospital A · validation (selection set)</button>
       </div>
       <div class="ops" role="group" aria-label="Operating points chosen on hospital A">
         <button type="button" class="btn" id="op-a" data-testid="op-a" aria-pressed="true">Utility-optimal (chosen on A)</button>
@@ -232,7 +232,7 @@ footer strong { color: var(--ink); }
         <div class="kv"><span class="nm">Threshold</span><span class="v" data-testid="metric-threshold" id="m-thr"></span></div>
         <div class="kv"><span class="nm">False alarms per patient-day</span><span class="v" data-testid="metric-fa" id="m-fa"></span></div>
         <div class="kv"><span class="nm">Challenge utility</span><span class="v" data-testid="metric-utility" id="m-util"></span></div>
-        <div class="kv"><span class="nm">Median warning</span><span class="v" data-testid="metric-lead" id="m-lead"></span></div>
+        <div class="kv"><span class="nm">Alerted in the 12 h before onset</span><span class="v" data-testid="metric-window" id="m-window"></span></div>
       </div>
     </div>
     <p class="status" id="status" role="status" aria-live="polite" data-testid="status"></p>
@@ -338,7 +338,7 @@ footer strong { color: var(--ink); }
   var T = D.thresholds, NT = T.length, LOG_MIN = Math.log10(D.meta.risk_floor);
   var A_INDEX = T.indexOf(D.meta.threshold), BUDGET_INDEX = T.indexOf(D.meta.budget_threshold);
   var COHORT_KEYS = { B: "B", A_val: "A_val" }; // state.cohort is already the data key
-  var COHORT_TITLE = { B: "Hospital B", A_val: "Hospital A" };
+  var COHORT_TITLE = { B: "Hospital B", A_val: "Hospital A validation (selection set, optimistic)" };
 
   var $ = function (id) { return document.getElementById(id); };
   var state = { cohort: "B", ti: A_INDEX, dragging: false, ready: false };
@@ -357,7 +357,7 @@ footer strong { color: var(--ink); }
     return {
       "hero-patients": fmtInt(EVB.n_patients),
       "hero-caught": pct(EVB.septic_alerted_before_onset),
-      "hero-lead": (EVB.median_lead_time_h % 1 ? EVB.median_lead_time_h.toFixed(1) : String(EVB.median_lead_time_h)) + " h",
+      "hero-window": pct(EVB.septic_alerted_in_window),
       "hero-fa": EVB.false_alarms_per_patient_day.toFixed(2)
     };
   }
@@ -367,7 +367,7 @@ footer strong { color: var(--ink); }
     if (skipAnim) return done();
     var targets = {
       "hero-patients": [EVB.n_patients, fmtInt], "hero-caught": [100 * EVB.septic_alerted_before_onset, function (v) { return v.toFixed(1) + "%"; }],
-      "hero-lead": [EVB.median_lead_time_h, function (v) { return Math.round(v) + " h"; }], "hero-fa": [EVB.false_alarms_per_patient_day, function (v) { return v.toFixed(2); }]
+      "hero-window": [100 * EVB.septic_alerted_in_window, function (v) { return v.toFixed(1) + "%"; }], "hero-fa": [EVB.false_alarms_per_patient_day, function (v) { return v.toFixed(2); }]
     };
     var t0 = performance.now(), dur = 900 / hooks.speed;
     (function step(now) {
@@ -525,7 +525,7 @@ footer strong { color: var(--ink); }
     v("m-thr", riskPct(T[state.ti]));
     v("m-fa", g.false_alarms_per_patient_day.toFixed(2));
     v("m-util", g.utility.toFixed(3));
-    v("m-lead", g.median_lead_time_h == null ? "n/a" : g.median_lead_time_h + " h");
+    v("m-window", pct(g.septic_alerted_in_window));
     handle.setAttribute("aria-valuemin", T[0]); handle.setAttribute("aria-valuemax", T[NT - 1]);
     handle.setAttribute("aria-valuenow", T[state.ti]);
     handle.setAttribute("aria-valuetext", riskPct(T[state.ti]) + " risk threshold, " + fmtInt(g.early) + " of " + fmtInt(ns) + " septic patients caught early");
@@ -539,7 +539,7 @@ footer strong { color: var(--ink); }
     $("cohort-A").setAttribute("aria-pressed", String(state.cohort === "A_val"));
     $("field-note").textContent = (state.cohort === "B"
       ? "Hospital B is the external test set: the model never saw it. The two triangles mark thresholds chosen on hospital A; the line you drag here is for exploring, not a re-tuned operating point. "
-      : "Hospital A is where the model was tuned and the threshold was chosen, so it looks better here than on hospital B. ") +
+      : "Hospital A validation is the selection set: early stopping, tuning, calibration and the threshold were all chosen on it, so it looks better here than on hospital B. ") +
       "Heights are not to scale between the two groups.";
     for (var k = 0; k < 5; k++) if (drawnCounts[k] !== g[CATS[k]]) {
       console.error("drawn count differs from the grid for " + CATS[k] + ": " + drawnCounts[k] + " vs " + g[CATS[k]]);
@@ -640,7 +640,9 @@ footer strong { color: var(--ink); }
   function idxOf(p, iculos) { if (iculos == null) return null; var i = p.iculos.indexOf(Math.round(iculos)); return i < 0 ? null : i; }
   function bannerFor(p) {
     var n = function (v) { return Math.round(v); };
-    if (p.category === "early") return [n(p.lead_h) + " hours of warning", "The first alert came " + n(p.lead_h) + " hours before clinical onset."];
+    if (p.category === "early") return ["First alert " + n(p.lead_h) + " hours before onset", n(p.lead_h) > 24
+      ? "The alert started more than a day before clinical onset: the model flagged a patient who already looked sick, rather than timing the onset."
+      : "The first alert came " + n(p.lead_h) + " hours before clinical onset."];
     if (p.category === "late") {
       var d = n(p.first_alert - p.onset);
       return [d === 0 ? "Alert came at the hour of onset" : "Alert came " + d + " hours after onset", "No alert fired before onset."];

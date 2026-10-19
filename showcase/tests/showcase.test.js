@@ -31,6 +31,7 @@ test("2 default numbers match the evaluation and the drawn dots match the counte
     const ev = D.meta.evaluation.B;
     assert.equal(await text(p, "hero-patients"), fmtInt(ev.n_patients));
     assert.equal(await text(p, "hero-caught"), pct(ev.septic_alerted_before_onset));
+    assert.equal(await text(p, "hero-window"), pct(ev.septic_alerted_in_window));
     assert.equal(await text(p, "hero-fa"), ev.false_alarms_per_patient_day.toFixed(2));
     const g = D.grid.B[A_INDEX], s = await state(p);
     for (const k of ["early", "late", "missed", "false_alarm", "quiet"]) assert.equal(s.counts[k], g[k], k);
@@ -104,7 +105,7 @@ test("8 replay: every patient ends on the banner for its category, with its driv
       await p.waitForSelector('#rp-monitor[data-done="1"]', { timeout: 15000 });
       const pt = D.replay[i], banner = await text(p, "replay-banner");
       assert.equal(await text(p, "replay-patient"), pt.id);
-      if (pt.category === "early") assert.ok(banner.startsWith(`${Math.round(pt.lead_h)} hours of warning`), banner);
+      if (pt.category === "early") assert.ok(banner.startsWith(`First alert ${Math.round(pt.lead_h)} hours before onset`), banner);
       if (pt.category === "late") assert.match(banner, /^Alert came (at the hour of onset|\d+ hours after onset)/);
       if (pt.category === "missed") assert.ok(banner.startsWith("No alert before onset"));
       if (pt.category === "false_alarm") assert.ok(banner.startsWith("No sepsis: false alarm"));

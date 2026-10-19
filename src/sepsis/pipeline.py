@@ -107,7 +107,7 @@ def build_pipeline(
     approval = ParameterString("ModelApprovalStatus", default_value="PendingManualApproval")
     boot = ParameterString("BootstrapResamples", default_value=str(n_boot))  # CLI args are strings
 
-    # 1. Features (same code and image as the local run; output verified identical in Phase 3)
+    # 1. Features (same code and image as the local run; output verified identical to a local run)
     features = make_processor(
         session, s, infra, module="sepsis.process", name="sepsis-features",
         instance_type=proc_type, image_uri=image,

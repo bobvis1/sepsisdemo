@@ -1,4 +1,4 @@
-"""Phase 1 acceptance: a trivial Processing job in the private VPC with network isolation,
+"""Smoke test: a trivial Processing job in the private VPC with network isolation,
 KMS-encrypted volume and output. Verifies the output object is SSE-KMS with our key.
 
 The job also tries to reach the internet; with isolation on, it must fail ("BLOCKED").

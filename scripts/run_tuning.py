@@ -1,4 +1,4 @@
-"""Bayesian hyperparameter tuning of XGBoost on SageMaker (Phase 5).
+"""Bayesian hyperparameter tuning of XGBoost on SageMaker.
 
 Objective: validation AUPRC on the hospital A validation split. Hospital B is never read.
 Jobs run on managed Spot, in the private VPC, with network isolation and KMS-encrypted volumes.

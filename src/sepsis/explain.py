@@ -1,4 +1,4 @@
-"""Explainability and subgroup performance (Phase 9, XGBoost built-in SHAP fallback for Clarify).
+"""Explainability and subgroup performance (XGBoost built-in SHAP, used instead of Clarify).
 
     python -m sepsis.explain --model-dir outputs/xgboost_full --evaluation outputs/eval_xgboost \
         --features data/features --out outputs/explain

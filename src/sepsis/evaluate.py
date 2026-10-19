@@ -103,6 +103,12 @@ def metric_values(c, rank, p_raw, st, obs, best, inact, w_pat=None) -> dict[str,
             st["lead"][alerted & keep], wp[alerted & keep]
         ),
         "septic_alerted_before_onset": float((wp * alerted).sum() / (wp * st["septic"]).sum()),
+        "septic_alerted_in_window": float(
+            (wp * st["warned_in_window"]).sum() / (wp * st["septic"]).sum()
+        ),
+        "first_alert_over_24h_early": float(
+            (wp * (st["lead"] > 24))[alerted].sum() / wp[alerted].sum()
+        ),
         "false_alarms_per_patient_day": float(
             24 * (wp * st["alert_hours"])[nonsep].sum() / (wp * st["hours"])[nonsep].sum()
         ),
@@ -147,7 +153,9 @@ def report_md(ev: dict) -> str:
         "median_lead_time_h": "Median lead time, h (septic, alerted before onset)",
         "median_lead_time_excl_first_row_positive_h":
             "Median lead time, h, excl. first-row positives",
-        "septic_alerted_before_onset": "Septic patients alerted before onset",
+        "septic_alerted_before_onset": "Septic patients alerted before onset (any time)",
+        "septic_alerted_in_window": "Septic patients alerted in the 12 h before onset",
+        "first_alert_over_24h_early": "Of those alerted before onset, first alert > 24 h early",
         "false_alarms_per_patient_day": "False alarms per patient-day (non-septic)",
     }  # fmt: skip
     a, b = ev["hospital_A_validation"], ev["hospital_B"]
@@ -161,7 +169,8 @@ def report_md(ev: dict) -> str:
         "utility on hospital A validation. Platt calibration and the threshold were fit on "
         "hospital A validation only; hospital B was never used for fitting or tuning. "
         f"95% CIs: percentile bootstrap, {ev['n_bootstrap']} resamples of patients.", "",
-        "| | Hospital A validation | Hospital B (external) |", "|---|---|---|",
+        "| | Hospital A validation (selection set, optimistic) | Hospital B (external) |",
+        "|---|---|---|",
         f"| Patients (septic) | {a['n_patients']:,} ({a['n_septic_patients']:,}) "
         f"| {b['n_patients']:,} ({b['n_septic_patients']:,}) |",
         f"| Hour prevalence | {a['hour_prevalence']:.4f} | {b['hour_prevalence']:.4f} |",
@@ -171,7 +180,7 @@ def report_md(ev: dict) -> str:
         lines.append(f"| {label} | {cell(a['metrics'][k])} | {cell(b['metrics'][k])} |")
     lines += ["", "## Calibration (equal-count bins, calibrated probabilities)", ""]
     for key, title in (
-        ("hospital_A_validation", "Hospital A validation"),
+        ("hospital_A_validation", "Hospital A validation (selection set, optimistic)"),
         ("hospital_B", "Hospital B"),
     ):
         lines += [f"**{title}**", "", "| mean predicted | observed rate | hours |", "|---|---|---|"]

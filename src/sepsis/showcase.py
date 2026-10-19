@@ -1,7 +1,7 @@
-"""Data export for the interactive results showcase (VIZ_PLAN.md, Phase V1).
+"""Data export for the interactive results showcase (see VIZ_PLAN.md).
 
     uv run python -m sepsis.showcase --model-dir outputs/pipe2/model \
-        --evaluation outputs/pipe2/eval_xgboost --features data/features \
+        --evaluation outputs/final/eval_xgboost --features data/features \
         --template showcase/template.html --out outputs/showcase
 
 Scores hospital B (and hospital A validation) with the frozen model, calibration and threshold from
@@ -42,6 +42,7 @@ WALL_HOURS = (-48, 6)
 PLACEHOLDER = "__SHOWCASE_DATA__"
 CHECK_METRICS = (
     "septic_alerted_before_onset",
+    "septic_alerted_in_window",
     "false_alarms_per_patient_day",
     "utility",
     "alert_rate",
@@ -162,6 +163,7 @@ def grid_row(sc: Scored, s: Summary, t: float, best: np.ndarray, inact: np.ndarr
         "t": float(t),
         **{name: int(n) for name, n in zip(CATEGORIES, counts, strict=True)},
         "septic_alerted_before_onset": float(alerted.sum() / st["septic"].sum()),
+        "septic_alerted_in_window": float(st["warned_in_window"].sum() / st["septic"].sum()),
         "false_alarms_per_patient_day": float(
             24 * st["alert_hours"][nonsep].sum() / st["hours"][nonsep].sum()
         ),
