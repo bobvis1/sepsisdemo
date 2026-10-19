@@ -21,6 +21,11 @@
   --c-quiet: #a9b6bb;
   --c-idle: #b9c4c8;
   --focus: #1f5fbf;
+  --seq-lo: #e9eff1;
+  --seq-hi: #0a3b8c;
+  /* monitors are always dark, in both themes */
+  --mon-bg: #070d10; --mon-panel: #0d171b; --mon-line: #1d2e35; --mon-ink: #dbe8ec; --mon-dim: #7f97a1;
+  --mon-trace: #7be0d0; --mon-alert: #f2b134; --mon-onset: #ff7a90; --mon-bar: #5a97f5;
   --font-display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -40,6 +45,8 @@
     --c-quiet: #4b5c63;
     --c-idle: #3a4a50;
     --focus: #7db0ff;
+    --seq-lo: #16262c;
+    --seq-hi: #86b4ff;
     color-scheme: dark;
   }
 }
@@ -58,6 +65,8 @@
   --c-quiet: #4b5c63;
   --c-idle: #3a4a50;
   --focus: #7db0ff;
+  --seq-lo: #16262c;
+  --seq-hi: #86b4ff;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -132,7 +141,47 @@ footer { border-top: 1px solid var(--rule); padding-top: 22px; display: flex; fl
 footer strong { color: var(--ink); }
 .cite { color: var(--ink-3); font-size: 0.82rem; }
 
-@media (max-width: 900px) { .ward { grid-template-columns: minmax(0, 1fr); } }
+
+/* monitors (Scenes 2 and 3): always dark */
+.monitor { background: var(--mon-bg); color: var(--mon-ink); border: 1px solid var(--mon-line); border-radius: 6px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.mon-head { display: flex; flex-wrap: wrap; gap: 4px 18px; justify-content: space-between; align-items: baseline; font-family: var(--font-mono); font-size: 13px; color: var(--mon-dim); }
+.mon-head b { color: var(--mon-ink); font-weight: 500; }
+.mon-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.mon-body canvas { display: block; width: 100%; }
+.mon-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.mon-side[data-empty="1"] { min-height: 0; }
+.atag { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.06em; color: #1a1202; background: var(--mon-alert); padding: 5px 10px; border-radius: 3px; align-self: flex-start; }
+.banner { border-left: 3px solid var(--mon-trace); padding: 4px 0 4px 12px; font-size: 1.25rem; font-weight: 600; line-height: 1.25; }
+.banner[data-kind="late"], .banner[data-kind="missed"] { border-color: var(--mon-onset); }
+.banner[data-kind="false_alarm"] { border-color: var(--mon-alert); }
+.banner small { display: block; font-size: 0.82rem; font-weight: 400; color: var(--mon-dim); margin-top: 2px; }
+.drivers { background: var(--mon-panel); border: 1px solid var(--mon-line); border-radius: 4px; padding: 12px; display: flex; flex-direction: column; gap: 9px; animation: slidein 0.35s ease-out; }
+.drivers h4 { margin: 0; font-size: 0.82rem; font-weight: 600; color: var(--mon-dim); }
+.drv { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; font-size: 0.9rem; }
+.drv i { display: block; height: 6px; background: var(--mon-bar); border-radius: 1px; }
+@keyframes slidein { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+.mon-note { color: var(--mon-dim); font-size: 0.82rem; }
+.beds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.bed { background: var(--mon-panel); border: 2px solid var(--mon-line); border-radius: 4px; padding: 8px 9px 7px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bed-top { display: flex; justify-content: space-between; gap: 6px; font-family: var(--font-mono); font-size: 11.5px; color: var(--mon-dim); }
+.bed-top b { color: var(--mon-ink); font-weight: 500; }
+.bed svg { width: 100%; height: 34px; display: block; }
+.bed-foot { display: flex; justify-content: space-between; gap: 6px; font-family: var(--font-mono); font-size: 11.5px; }
+.bed .st { color: var(--mon-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bed.alert { border-color: var(--mon-alert); animation: pulse 1.1s ease-in-out infinite; }
+.bed.alert .st { color: var(--mon-alert); }
+.bed.onset { border-color: var(--mon-onset); }
+.bed.onset .st { color: var(--mon-onset); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 3px rgba(242, 177, 52, 0.25); } }
+.tally { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 22px; border-top: 1px solid var(--mon-line); padding-top: 12px; }
+.tally div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tally b { font-family: var(--font-mono); font-weight: 500; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.tally span { color: var(--mon-dim); font-size: 0.84rem; }
+.wall { position: relative; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; min-width: 0; }
+.wall canvas { display: block; width: 100%; }
+.legend-bar { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+.legend-bar i { display: block; width: 180px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--seq-lo), var(--seq-hi)); border: 1px solid var(--rule); }
+@media (max-width: 900px) { .ward, .mon-body { grid-template-columns: minmax(0, 1fr); } .beds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 
@@ -186,6 +235,71 @@ footer strong { color: var(--ink); }
       </div>
     </div>
     <p class="status" id="status" role="status" aria-live="polite" data-testid="status"></p>
+  </section>
+
+  <section class="sect" id="scene-replay" aria-labelledby="replay-h">
+    <div class="sect-head">
+      <h2 id="replay-h">Bedside replay</h2>
+      <p>One patient's stay at hospital B, hour by hour. The line is the model's risk; the dashed line is the alert threshold chosen on hospital A. Vitals show the last recorded value.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Patient type" id="rp-chips"></div>
+      <div class="seg" role="group" aria-label="Playback">
+        <button type="button" id="rp-prev" data-testid="replay-prev">Previous</button>
+        <button type="button" id="rp-play" data-testid="replay-play">Pause</button>
+        <button type="button" id="rp-replay" data-testid="replay-replay">Replay</button>
+        <button type="button" id="rp-next" data-testid="replay-next">Next</button>
+      </div>
+    </div>
+    <div class="monitor" id="rp-monitor" data-done="0">
+      <div class="mon-head"><span><b id="rp-id" data-testid="replay-patient"></b> · <span id="rp-cat" data-testid="replay-category"></span></span><span id="rp-hour" data-testid="replay-hour"></span></div>
+      <div class="mon-body">
+        <canvas id="rp-canvas" role="img" aria-label="Risk trace and vital signs for one patient"></canvas>
+        <div class="mon-side">
+          <div class="atag" id="rp-alert" data-testid="replay-alert-tag" hidden></div>
+          <div class="banner" id="rp-banner" data-testid="replay-banner" hidden></div>
+          <div class="drivers" id="rp-drivers" data-testid="replay-drivers" hidden></div>
+        </div>
+      </div>
+      <p class="mon-note" id="rp-note">Patients are chosen by a fixed rule (typical lead time for early catches, random otherwise), not cherry-picked: 3 early catches, 2 late, 2 missed, 2 false alarms, 1 quiet, all from hospital B stays of 24 to 150 hours.</p>
+    </div>
+  </section>
+
+  <section class="sect" id="scene-shift" aria-labelledby="shift-h">
+    <div class="sect-head">
+      <h2 id="shift-h">Night shift</h2>
+      <p>Twenty beds, 24 hours, patients drawn at random from 400 hospital B patients, so sepsis is as rare as it really is. Run the same shift at two thresholds and compare the alarms.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Alert threshold for the shift">
+        <button type="button" id="sh-a" data-testid="shift-thr-a" aria-pressed="true">Utility-optimal (A)</button>
+        <button type="button" id="sh-budget" data-testid="shift-thr-budget" aria-pressed="false">0.5 false alarms/day budget (A)</button>
+      </div>
+      <button type="button" class="btn" id="sh-new" data-testid="shift-new">New shift</button>
+      <button type="button" class="btn" id="sh-replay" data-testid="shift-replay">Replay shift</button>
+    </div>
+    <div class="monitor">
+      <div class="mon-head"><span>Seed <b id="sh-seed" data-testid="shift-seed"></b></span><span id="sh-clock" data-testid="shift-clock"></span></div>
+      <div class="beds" id="beds"></div>
+      <div class="tally">
+        <div><b id="sh-ep" data-testid="shift-episodes">0</b><span>alert episodes started</span></div>
+        <div><b id="sh-ep-s" data-testid="shift-episodes-septic">0</b><span>of them on patients who developed sepsis</span></div>
+        <div><b id="sh-on" data-testid="shift-onsets">0</b><span>sepsis onsets this shift</span></div>
+        <div><b id="sh-on-a" data-testid="shift-onsets-alerted">0</b><span>of them with an alert in the 48 h before</span></div>
+        <div><b id="sh-ah" data-testid="shift-alert-hours">0</b><span>bed-hours in alert</span></div>
+      </div>
+      <p class="mon-note">An episode starts at an alert hour that follows a non-alert hour. The formal evaluation counts alert hours, not episodes. In about a third of shifts nobody develops sepsis; that is how a ward really looks.</p>
+    </div>
+  </section>
+
+  <section class="sect" id="scene-wall" aria-labelledby="wall-h">
+    <div class="sect-head">
+      <h2 id="wall-h">Swimmer wall</h2>
+      <p>Every septic patient at hospital B, one row each, lined up at clinical onset. Rows are sorted by when the first alert fired. Darker means higher risk.</p>
+    </div>
+    <div class="wall" id="wall"><canvas id="wall-canvas" role="img" aria-label="Risk around onset for every septic patient"></canvas><div class="tip" id="wall-tip" hidden></div></div>
+    <div class="legend-bar"><span>0.01%</span><i></i><span>100% risk</span><span id="wall-count" data-testid="wall-count" style="margin-left:auto"></span></div>
+    <p class="note">Each row is one septic patient at hospital B, aligned at clinical onset (the vertical line). A white dot marks the first alert; a dot at the far left means the first alert came more than 48 hours before onset. Rows with no dot never alerted. Stays usually end a few hours after onset, so the right edge thins out.</p>
   </section>
 
   <footer>
@@ -494,6 +608,313 @@ footer strong { color: var(--ink); }
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { readColors(); draw(); });
   new MutationObserver(function () { readColors(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
+  // ============ shared animation clock (only runs while something is playing and visible) ===========
+  var loopOn = false, lastNow = 0, visible = { replay: false, shift: false };
+  function kick() { if (!loopOn) { loopOn = true; lastNow = performance.now(); requestAnimationFrame(tick); } }
+  function tick(now) {
+    var dt = Math.min(0.25, (now - lastNow) / 1000); lastNow = now;
+    var busy = false;
+    if (rp.playing && visible.replay) { rpStep(dt); busy = true; }
+    if (sh.playing && visible.shift) { shStep(dt); busy = true; }
+    if (busy) requestAnimationFrame(tick); else loopOn = false;
+  }
+  function watch(id, key, onSeen) {
+    var el = $(id);
+    if (!window.IntersectionObserver) { visible[key] = true; onSeen(); return; }
+    new IntersectionObserver(function (es) {
+      var v = es[0].isIntersecting; visible[key] = v;
+      if (v) onSeen();
+    }, { threshold: 0.25 }).observe(el);
+  }
+
+  // ============ Scene 2: bedside replay ============================================================
+  var RP = D.replay, RPN = RP.length, THR_A = D.meta.threshold;
+  var RP_LABEL = { early: "Early catch", late: "Late catch", missed: "Missed", false_alarm: "False alarm", quiet: "Quiet" };
+  var VIT = [["HR", "Heart rate", "bpm", 0], ["MAP", "Mean arterial pressure", "mmHg", 0], ["Resp", "Respiratory rate", "/min", 0], ["Temp", "Temperature", "°C", 1], ["O2Sat", "Oxygen saturation", "%", 0]];
+  var rpCv = $("rp-canvas"), rpCtx = null, rg = {};
+  var rp = { i: 0, h: 0, playing: false, done: false, started: false, alertAt: null, flashT: -9 };
+  var rpAlertIdx = null, rpOnsetIdx = null, rpFocusIdx = 0;
+  function mono() { return getComputedStyle(document.body).getPropertyValue("--font-mono"); }
+  function rpP() { return RP[rp.i]; }
+  function idxOf(p, iculos) { if (iculos == null) return null; var i = p.iculos.indexOf(Math.round(iculos)); return i < 0 ? null : i; }
+  function bannerFor(p) {
+    var n = function (v) { return Math.round(v); };
+    if (p.category === "early") return [n(p.lead_h) + " hours of warning", "The first alert came " + n(p.lead_h) + " hours before clinical onset."];
+    if (p.category === "late") {
+      var d = n(p.first_alert - p.onset);
+      return [d === 0 ? "Alert came at the hour of onset" : "Alert came " + d + " hours after onset", "No alert fired before onset."];
+    }
+    if (p.category === "missed") return ["No alert before onset", "The risk never reached the threshold."];
+    if (p.category === "false_alarm") return ["No sepsis: false alarm", "The alert fired but the patient did not develop sepsis."];
+    return ["No alert, no sepsis", "The risk stayed under the threshold all stay."];
+  }
+  function rpLayout() {
+    var W = rpCv.parentElement.clientWidth || 700, dpr = window.devicePixelRatio || 1;
+    rg = { W: W, left: 70, right: 14, riskTop: 34, riskBottom: 236, vitTop: 282, vitH: 34, gap: 8, dpr: dpr };
+    rg.H = rg.vitTop + VIT.length * (rg.vitH + rg.gap) + 6;
+    rpCv.width = Math.round(W * dpr); rpCv.height = Math.round(rg.H * dpr); rpCv.style.height = rg.H + "px";
+    rpCtx = rpCv.getContext("2d"); rpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function rpDraw() {
+    if (!rpCtx) return;
+    var p = rpP(), n = p.iculos.length, ctx = rpCtx, W = rg.W, thr = THR_A;
+    var x = function (i) { return rg.left + (n > 1 ? i / (n - 1) : 0) * (W - rg.left - rg.right); };
+    var vals = p.risk.filter(function (v) { return v != null; }), ymax = Math.max(Math.max.apply(null, vals) * 1.15, thr * 1.7);
+    var y = function (v) { return rg.riskBottom - (v / ymax) * (rg.riskBottom - rg.riskTop); };
+    var cur = Math.min(rp.h, n - 1), k = Math.floor(cur), frac = cur - k;
+    var cs = getComputedStyle(document.documentElement), g = function (nm) { return cs.getPropertyValue(nm).trim(); };
+    var ink = g("--mon-ink"), dim = g("--mon-dim"), line = g("--mon-line"), trace = g("--mon-trace"), alertC = g("--mon-alert"), onsetC = g("--mon-onset");
+    ctx.clearRect(0, 0, W, rg.H); ctx.font = "11px " + mono();
+    // risk grid and labels
+    ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.fillStyle = dim; ctx.textAlign = "right";
+    [0, ymax].forEach(function (v) { ctx.beginPath(); ctx.moveTo(rg.left, Math.round(y(v)) + 0.5); ctx.lineTo(W - rg.right, Math.round(y(v)) + 0.5); ctx.stroke(); ctx.fillText(riskPct(v).replace(/^0\.0+%$/, "0%"), rg.left - 8, y(v) + 4); });
+    ctx.textAlign = "left"; ctx.fillText("risk", 6, rg.riskTop - 12);
+    // hour ticks
+    ctx.textAlign = "center";
+    for (var i = 0; i < n; i++) if (p.iculos[i] % 12 === 0) { ctx.fillStyle = dim; ctx.fillText(p.iculos[i], x(i), rg.riskBottom + 15); ctx.fillRect(Math.round(x(i)), rg.riskBottom, 1, 4); }
+    ctx.textAlign = "right"; ctx.fillStyle = dim; ctx.fillText("hour in ICU", W - rg.right, rg.riskBottom + 30);
+    // threshold (flashes when the alert fires)
+    var flash = Math.max(0, 1 - (performance.now() - rp.flashT) / 700);
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = alertC; ctx.lineWidth = 1 + 2 * flash; ctx.globalAlpha = 0.55 + 0.45 * flash;
+    ctx.beginPath(); ctx.moveTo(rg.left, y(thr)); ctx.lineTo(W - rg.right, y(thr)); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.fillStyle = alertC; ctx.textAlign = "left"; ctx.fillText("alert threshold " + riskPct(thr), rg.left + 6, y(thr) - 6);
+    // onset and alert markers once reached
+    if (rpOnsetIdx != null && cur >= rpOnsetIdx) {
+      ctx.strokeStyle = onsetC; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x(rpOnsetIdx), rg.riskTop - 6); ctx.lineTo(x(rpOnsetIdx), rg.vitTop + VIT.length * (rg.vitH + rg.gap)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = onsetC; ctx.textAlign = rpOnsetIdx > n * 0.8 ? "right" : "left"; ctx.fillText("Sepsis onset", x(rpOnsetIdx) + (rpOnsetIdx > n * 0.8 ? -5 : 5), rg.riskTop - 10);
+    }
+    if (rpAlertIdx != null && cur >= rpAlertIdx) {
+      ctx.strokeStyle = alertC; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x(rpAlertIdx), rg.riskTop - 6); ctx.lineTo(x(rpAlertIdx), rg.riskBottom); ctx.stroke();
+      ctx.fillStyle = alertC; ctx.textAlign = rpAlertIdx > n * 0.8 ? "right" : "left"; ctx.fillText("ALERT", x(rpAlertIdx) + (rpAlertIdx > n * 0.8 ? -5 : 5), rg.riskTop + 4);
+    }
+    // risk trace up to the current hour
+    ctx.strokeStyle = trace; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.beginPath();
+    for (var j = 0; j <= k; j++) { var v = p.risk[j]; if (v == null) continue; (j === 0 ? ctx.moveTo : ctx.lineTo).call(ctx, x(j), y(v)); }
+    var tipV = p.risk[k], tx = x(k), ty = y(tipV);
+    if (frac > 0 && k + 1 < n && p.risk[k + 1] != null) { tipV = tipV + (p.risk[k + 1] - tipV) * frac; tx = x(k + frac); ty = y(tipV); ctx.lineTo(tx, ty); }
+    ctx.stroke();
+    ctx.save(); ctx.shadowColor = trace; ctx.shadowBlur = 12; ctx.fillStyle = trace; ctx.beginPath(); ctx.arc(tx, ty, 3.6, 0, 6.2832); ctx.fill(); ctx.restore();
+    // vitals (last recorded values)
+    VIT.forEach(function (vt, r) {
+      var top = rg.vitTop + r * (rg.vitH + rg.gap), arr = p[vt[0]], present = arr.filter(function (a) { return a != null; });
+      ctx.fillStyle = line; ctx.fillRect(rg.left, top + rg.vitH, W - rg.left - rg.right, 1);
+      ctx.textAlign = "left"; ctx.fillStyle = dim; ctx.fillText(vt[0], 6, top + 12);
+      if (!present.length) { ctx.fillText("no data", rg.left + 6, top + 20); return; }
+      var lo = Math.min.apply(null, present), hi = Math.max.apply(null, present), span = hi - lo || 1;
+      ctx.strokeStyle = ink; ctx.globalAlpha = 0.85; ctx.lineWidth = 1.4; ctx.beginPath(); var pen = false;
+      for (var q = 0; q <= k; q++) { var a = arr[q]; if (a == null) { pen = false; continue; } var yy = top + rg.vitH - 3 - ((a - lo) / span) * (rg.vitH - 8); if (!pen) { ctx.moveTo(x(q), yy); pen = true; } else ctx.lineTo(x(q), yy); }
+      ctx.stroke(); ctx.globalAlpha = 1;
+      var lastV = null; for (var q2 = k; q2 >= 0; q2--) if (arr[q2] != null) { lastV = arr[q2]; break; }
+      ctx.fillStyle = ink; ctx.fillText(lastV == null ? "–" : lastV.toFixed(vt[3]), 6, top + 26);
+    });
+    setAttr(rpCv, "aria-label", p.id + ", " + RP_LABEL[p.category] + ", hour " + p.iculos[k] + " of " + p.iculos[n - 1] + ". " + ($("rp-banner").hidden ? "" : $("rp-banner").textContent));
+  }
+  // Write to the DOM only when a value changes: rewriting a button's text every frame can swallow clicks.
+  function setText(el, v) { if (el.textContent !== v) el.textContent = v; }
+  function setHidden(el, h) { if (el.hidden !== h) el.hidden = h; }
+  function setAttr(el, n, v) { if (el.getAttribute(n) !== v) el.setAttribute(n, v); }
+  function rpSync() {
+    var p = rpP(), n = p.iculos.length, cur = Math.min(Math.floor(rp.h), n - 1);
+    setText($("rp-id"), p.id); setText($("rp-cat"), RP_LABEL[p.category]);
+    setText($("rp-hour"), "Hour " + p.iculos[cur] + " of " + p.iculos[n - 1]);
+    var alertOn = rpAlertIdx != null && cur >= rpAlertIdx;
+    var a = $("rp-alert"); setHidden(a, !alertOn); if (alertOn) setText(a, "ALERT · hour " + p.iculos[rpAlertIdx]);
+    var onsetPassed = p.onset != null && (rpOnsetIdx != null ? cur >= rpOnsetIdx : rp.done);
+    var showBanner = p.onset != null ? (onsetPassed || rp.done) : rp.done;
+    var b = $("rp-banner"); setHidden(b, !showBanner);
+    if (showBanner && b.dataset.for !== p.id) {
+      var bf = bannerFor(p); b.textContent = ""; b.appendChild(document.createTextNode(bf[0]));
+      var sm = document.createElement("small"); sm.textContent = bf[1]; b.appendChild(sm); b.dataset.kind = p.category; b.dataset.for = p.id;
+    }
+    if (!showBanner) delete b.dataset.for;
+    var d = $("rp-drivers"), dOn = p.drivers.length && cur >= rpFocusIdx;
+    if (dOn && d.hidden) {
+      var mx = Math.max.apply(null, p.drivers.map(function (q) { return q.contrib; }));
+      d.innerHTML = "<h4>" + (p.first_alert != null ? "What pushed the risk up at hour " + p.iculos[rpFocusIdx] : "No alert fired. At its highest-risk hour (hour " + p.iculos[rpFocusIdx] + "), what pushed the risk up") + "</h4>" + p.drivers.map(function (q, ix) {
+        return '<div class="drv" data-testid="replay-driver-' + ix + '"><span>' + q.label + '</span><i style="width:' + Math.max(8, Math.round(100 * q.contrib / mx)) + '%"></i></div>';
+      }).join("");
+    }
+    setHidden(d, !dOn);
+    var mon = $("rp-monitor"), dn = rp.done ? "1" : "0"; if (mon.dataset.done !== dn) mon.dataset.done = dn;
+    setText($("rp-play"), rp.playing ? "Pause" : "Play");
+    document.querySelectorAll("#rp-chips button").forEach(function (bt) { setAttr(bt, "aria-pressed", String(bt.dataset.cat === p.category)); });
+  }
+  function rpShow(i, opts) {
+    opts = opts || {}; rp.i = ((i % RPN) + RPN) % RPN; var p = rpP();
+    rpAlertIdx = idxOf(p, p.first_alert); rpOnsetIdx = idxOf(p, p.onset); rpFocusIdx = idxOf(p, p.focus_iculos) || 0;
+    rp.h = 0; rp.done = false; rp.flashT = -9; $("rp-drivers").hidden = true;
+    var n = p.iculos.length;
+    if (opts.end) { rp.h = n - 1; rp.done = true; rp.playing = false; }
+    else if (opts.hour != null) { var ix = idxOf(p, opts.hour); rp.h = ix == null ? 0 : ix; rp.playing = false; rp.done = rp.h >= n - 1; }
+    else rp.playing = !!opts.play;
+    rp.started = true; rpSync(); rpDraw(); if (rp.playing) kick();
+  }
+  function rpStep(dt) {
+    var p = rpP(), n = p.iculos.length, before = Math.floor(rp.h);
+    rp.h = Math.min(n - 1, rp.h + dt * 8 * hooks.speed);
+    var cur = Math.floor(rp.h);
+    if (rpAlertIdx != null && before < rpAlertIdx && cur >= rpAlertIdx) rp.flashT = performance.now();
+    if (rp.h >= n - 1) { rp.playing = false; rp.done = true; }
+    rpSync(); rpDraw();
+  }
+  function rpReplay() { rpShow(rp.i, { play: true }); }
+  (function () {
+    var box = $("rp-chips");
+    Object.keys(RP_LABEL).forEach(function (cat) {
+      var bt = document.createElement("button"); bt.type = "button"; bt.dataset.cat = cat; bt.textContent = RP_LABEL[cat];
+      bt.setAttribute("data-testid", "replay-chip-" + cat); bt.setAttribute("aria-pressed", "false");
+      bt.addEventListener("click", function () { for (var q = 0; q < RPN; q++) if (RP[q].category === cat) { rpShow(q, { play: true }); return; } });
+      box.appendChild(bt);
+    });
+    $("rp-next").addEventListener("click", function () { rpShow(rp.i + 1, { play: true }); });
+    $("rp-prev").addEventListener("click", function () { rpShow(rp.i - 1, { play: true }); });
+    $("rp-replay").addEventListener("click", rpReplay);
+    $("rp-play").addEventListener("click", function () {
+      if (rp.done) return rpReplay();
+      rp.playing = !rp.playing; rpSync(); if (rp.playing) kick();
+    });
+  })();
+
+  // ============ Scene 3: night shift ===============================================================
+  var POOL = D.shift_pool, NBED = 20, NHOUR = 24;
+  var sh = { seed: parseInt(hooks.seed, 10) || 1, thr: THR_A, h: 0, playing: false, sim: null, hourShown: -1, tally: null };
+  function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function simulate(seed) {
+    var rnd = mulberry32(seed), beds = [];
+    for (var b = 0; b < NBED; b++) {
+      var pid = Math.floor(rnd() * POOL.length), idx = Math.floor(rnd() * POOL[pid].risk.length), tl = [];
+      for (var h = 0; h < NHOUR; h++) {
+        tl.push([pid, idx]); idx++;
+        if (idx >= POOL[pid].risk.length) { pid = Math.floor(rnd() * POOL.length); idx = 0; } // a new patient is admitted at hour 1
+      }
+      beds.push(tl);
+    }
+    return beds;
+  }
+  function isAlert(p, i, thr) { var v = p.risk[i]; return v != null && v >= thr; }
+  function tallyUpTo(hh, thr) {
+    var t = { episodes: 0, episodesSeptic: 0, onsets: 0, onsetsAlerted: 0, alertHours: 0 };
+    sh.sim.forEach(function (tl) {
+      for (var h = 0; h <= hh; h++) {
+        var p = POOL[tl[h][0]], i = tl[h][1], al = isAlert(p, i, thr);
+        if (al) {
+          t.alertHours++;
+          if (!(i > 0 && isAlert(p, i - 1, thr))) { t.episodes++; if (p.septic) t.episodesSeptic++; }
+        }
+        if (p.septic && p.onset_idx === i) {
+          t.onsets++;
+          for (var j = Math.max(0, i - 48); j < i; j++) if (isAlert(p, j, thr)) { t.onsetsAlerted++; break; }
+        }
+      }
+    });
+    return t;
+  }
+  function buildBeds() {
+    var box = $("beds"); box.textContent = "";
+    for (var b = 0; b < NBED; b++) {
+      var el = document.createElement("div"); el.className = "bed"; el.setAttribute("data-testid", "bed-" + (b + 1));
+      el.innerHTML = '<div class="bed-top"><b>Bed ' + (b + 1) + '</b><span class="bid"></span></div>' +
+        '<svg viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true"><line class="tl" x1="0" x2="120" stroke="#f2b134" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/><polyline fill="none" stroke="#7be0d0" stroke-width="1.6" points=""/><circle r="2.4" fill="#7be0d0" cx="-5" cy="-5"/></svg>' +
+        '<div class="bed-foot"><span class="st"></span><span class="rk"></span></div>';
+      box.appendChild(el);
+    }
+  }
+  function shSync() {
+    var hh = Math.min(NHOUR - 1, Math.floor(sh.h)), thr = sh.thr, YMAX = thr * 2.5;
+    var beds = document.querySelectorAll("#beds .bed");
+    sh.sim.forEach(function (tl, b) {
+      var pid = tl[hh][0], i = tl[hh][1], p = POOL[pid], el = beds[b];
+      var al = isAlert(p, i, thr), past = p.septic && p.onset_idx != null && i >= p.onset_idx;
+      el.className = "bed" + (al ? " alert" : "") + (past ? " onset" : "");
+      el.querySelector(".bid").textContent = p.id.replace("B_", "");
+      el.querySelector(".st").textContent = al && past ? "ALERT · past onset" : al ? "ALERT" : past ? "Past sepsis onset" : "Stable";
+      el.querySelector(".rk").textContent = p.risk[i] == null ? "–" : riskPct(p.risk[i]);
+      var from = Math.max(0, i - 23), pts = [];
+      for (var q = from; q <= i; q++) { var v = p.risk[q]; if (v == null) continue; pts.push(((q - from) / 23 * 120).toFixed(1) + "," + (32 - Math.min(1, v / YMAX) * 30).toFixed(1)); }
+      el.querySelector("polyline").setAttribute("points", pts.join(" "));
+      var lastPt = pts.length ? pts[pts.length - 1].split(",") : null, dot = el.querySelector("circle");
+      dot.setAttribute("cx", lastPt ? lastPt[0] : -5); dot.setAttribute("cy", lastPt ? lastPt[1] : -5);
+      var ln = el.querySelector(".tl"); ln.setAttribute("y1", 32 - Math.min(1, thr / YMAX) * 30); ln.setAttribute("y2", 32 - Math.min(1, thr / YMAX) * 30);
+    });
+    sh.tally = tallyUpTo(hh, thr); var t = sh.tally;
+    $("sh-ep").textContent = t.episodes; $("sh-ep-s").textContent = t.episodesSeptic; $("sh-on").textContent = t.onsets;
+    $("sh-on-a").textContent = t.onsetsAlerted; $("sh-ah").textContent = t.alertHours;
+    $("sh-seed").textContent = sh.seed;
+    $("sh-clock").textContent = sh.h >= NHOUR ? "Hour 24 of 24 · shift complete" : "Hour " + (hh + 1) + " of 24";
+    $("sh-a").setAttribute("aria-pressed", String(thr === THR_A)); $("sh-budget").setAttribute("aria-pressed", String(thr !== THR_A));
+    sh.hourShown = hh;
+  }
+  function shStart(opts) {
+    opts = opts || {}; sh.sim = simulate(sh.seed); sh.h = 0; sh.playing = false;
+    if (opts.end || skipAnim) sh.h = NHOUR; else sh.playing = true;
+    shSync(); if (sh.playing) kick();
+  }
+  function shStep(dt) {
+    sh.h = Math.min(NHOUR, sh.h + dt * hooks.speed / 0.75);
+    if (sh.h >= NHOUR) sh.playing = false;
+    if (Math.min(NHOUR - 1, Math.floor(sh.h)) !== sh.hourShown || sh.h >= NHOUR) shSync();
+  }
+  function shSetThr(t) { sh.thr = t; shSync(); }
+  $("sh-a").addEventListener("click", function () { shSetThr(THR_A); });
+  $("sh-budget").addEventListener("click", function () { shSetThr(D.meta.budget_threshold); });
+  $("sh-new").addEventListener("click", function () { sh.seed++; shStart({}); });
+  $("sh-replay").addEventListener("click", function () { shStart({}); });
+
+  // ============ Scene 4: swimmer wall ==========================================================================
+  var W4 = D.wall, WCOLS = W4.hours_to - W4.hours_from + 1, WROWS = W4.rows.length, wallBytes = null, wallCv = $("wall-canvas"), wg = {};
+  function decodeWall() { wallBytes = W4.rows.map(function (b64) { var s = atob(b64), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }); }
+  function hexRgb(h) { h = h.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  function wallDraw() {
+    var cs = getComputedStyle(document.documentElement), g = function (n) { return cs.getPropertyValue(n).trim(); };
+    var W = $("wall").clientWidth || 800, dpr = window.devicePixelRatio || 1;
+    wg = { W: W, left: 118, right: 16, top: 26, bottom: 36 }; wg.H = 640; wg.plotH = wg.H - wg.top - wg.bottom; wg.plotW = W - wg.left - wg.right;
+    wallCv.width = Math.round(W * dpr); wallCv.height = Math.round(wg.H * dpr); wallCv.style.height = wg.H + "px";
+    var ctx = wallCv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, wg.H);
+    var lo = hexRgb(g("--seq-lo")), hi = hexRgb(g("--seq-hi")), cw = wg.plotW / WCOLS, rh = wg.plotH / WROWS;
+    var lut = []; for (var q = 0; q < 256; q++) { var f = Math.max(0, (q - 1) / 254); lut.push("rgb(" + [0, 1, 2].map(function (c) { return Math.round(lo[c] + (hi[c] - lo[c]) * f); }).join(",") + ")"); }
+    for (var r = 0; r < WROWS; r++) {
+      var row = wallBytes[r], y0 = wg.top + r * rh;
+      for (var c = 0; c < WCOLS; c++) { var v = row[c]; if (v === 0) continue; ctx.fillStyle = lut[v]; ctx.fillRect(wg.left + c * cw, y0, cw + 0.3, Math.max(rh, 0.6)); }
+    }
+    var ink = g("--ink"), ink3 = g("--ink-3"), onsetX = wg.left + (0 - W4.hours_from) * cw;
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(onsetX, wg.top - 6); ctx.lineTo(onsetX, wg.top + wg.plotH + 4); ctx.stroke();
+    ctx.fillStyle = ink; ctx.font = "11px " + mono(); ctx.textAlign = "center"; ctx.fillText("onset", onsetX, wg.top - 10);
+    var panel = g("--panel"); ctx.fillStyle = panel;
+    for (var r2 = 0; r2 < WROWS; r2++) {
+      var fa = W4.first_alert_rel[r2]; if (fa == null) continue;
+      var col = Math.max(0, fa - W4.hours_from), cx = wg.left + (col + 0.5) * cw, cy = wg.top + (r2 + 0.5) * rh;
+      ctx.fillStyle = "#ffffff"; ctx.globalAlpha = 0.95; ctx.beginPath(); ctx.arc(cx, cy, Math.max(0.7, Math.min(1.4, rh * 1.3)), 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = ink3; ctx.textAlign = "center";
+    [-48, -36, -24, -12, 0, 6].forEach(function (h) { var x = wg.left + (h - W4.hours_from + 0.5) * cw; ctx.fillRect(Math.round(x), wg.top + wg.plotH + 2, 1, 4); ctx.fillText((h > 0 ? "+" : "") + h + " h", x, wg.top + wg.plotH + 20); });
+    ctx.textAlign = "right"; ctx.fillText("earliest alert", wg.left - 8, wg.top + 10); ctx.fillText("never alerted", wg.left - 8, wg.top + wg.plotH);
+    var never = W4.first_alert_rel.filter(function (a) { return a == null; }).length;
+    $("wall-count").textContent = fmtInt(WROWS) + " septic patients · " + fmtInt(never) + " never alerted";
+    wallCv.setAttribute("aria-label", "Risk around onset for " + WROWS + " septic patients; " + never + " never alerted");
+  }
+  $("wall").addEventListener("pointermove", function (e) {
+    var r = wallCv.getBoundingClientRect(), y = e.clientY - r.top, tipEl = $("wall-tip");
+    var row = Math.floor((y - wg.top) / wg.plotH * WROWS);
+    if (row < 0 || row >= WROWS) { tipEl.hidden = true; return; }
+    var fa = W4.first_alert_rel[row];
+    tipEl.textContent = fa == null ? "Never alerted" : fa < 0 ? "First alert " + Math.round(-fa) + " h before onset" : fa === 0 ? "First alert at onset" : "First alert " + Math.round(fa) + " h after onset";
+    tipEl.style.left = (e.clientX - r.left) + "px"; tipEl.style.top = (y) + "px"; tipEl.hidden = false;
+  });
+  $("wall").addEventListener("pointerleave", function () { $("wall-tip").hidden = true; });
+
+  function scenesInit() {
+    decodeWall(); wallDraw(); rpLayout(); buildBeds();
+    var s2 = hooks.scene2, start = 0;
+    if (s2 != null && /^\d+$/.test(s2)) start = parseInt(s2, 10);
+    else if (s2 != null) { for (var q = 0; q < RPN; q++) if (RP[q].category === s2) { start = q; break; } }
+    var pinned = hooks.hour != null || skipAnim;
+    rpShow(start, hooks.hour != null ? { hour: parseFloat(hooks.hour) } : skipAnim ? { end: true } : {});
+    shStart({ end: skipAnim });
+    if (!pinned) watch("scene-replay", "replay", function () { if (!rp.started || (rp.h === 0 && !rp.playing && !rp.done)) { rp.playing = true; rpSync(); kick(); } });
+    watch("scene-shift", "shift", function () { if (!skipAnim && sh.h === 0 && !sh.playing) { sh.playing = true; kick(); } });
+  }
+  window.addEventListener("resize", function () { if (wallBytes) { wallDraw(); rpLayout(); rpDraw(); } });
+
   // ---- start ----------------------------------------------------------------------------------
   function finish() {
     intro = null; handle.hidden = false; layout(); refresh(); readColors(); draw();
@@ -507,7 +928,7 @@ footer strong { color: var(--ink); }
       if (intro.elapsed < 2.8) requestAnimationFrame(step); else done();
     })(last);
   }
-  buildRows(); readColors();
+  buildRows(); readColors(); scenesInit();
   if (hooks.cohort === "A" || hooks.cohort === "A_val") state.cohort = "A_val";
   if (hooks.t != null && isFinite(parseFloat(hooks.t))) state.ti = nearestIndex(parseFloat(hooks.t));
   layout(); refresh(); readColors(); draw();
@@ -520,6 +941,9 @@ footer strong { color: var(--ink); }
       return Object.freeze({
         threshold: T[state.ti], thresholdIndex: state.ti, cohort: state.cohort,
         counts: Object.freeze(CATS.reduce(function (o, name, k) { o[name] = drawnCounts[k]; return o; }, {})),
+        replay: Object.freeze({ index: rp.i, id: rpP().id, category: rpP().category, iculos: rpP().iculos[Math.min(Math.floor(rp.h), rpP().iculos.length - 1)], playing: rp.playing, done: rp.done }),
+        shift: Object.freeze({ seed: sh.seed, hour: Math.min(24, Math.floor(sh.h)), threshold: sh.thr, tally: Object.freeze(Object.assign({}, sh.tally)) }),
+        wall: Object.freeze({ rows: WROWS, neverAlerted: W4.first_alert_rel.filter(function (a) { return a == null; }).length }),
         ready: state.ready, hooks: hooks
       });
     }

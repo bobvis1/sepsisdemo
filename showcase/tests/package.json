@@ -1,0 +1,15 @@
+{
+  "name": "sepsis-showcase-tests",
+  "private": true,
+  "type": "module",
+  "description": "Browser tests for the results showcase (real clicks and drags in installed Chrome)",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1"
+  },
+  "dependencies": {
+    "puppeteer-core": "25.12.0"
+  }
+}
