@@ -20,7 +20,7 @@ than a model with state-of-the-art performance.
 | SHAP and subgroup analysis (Clarify fallback) | Done (on the registered model, v2) |
 | SageMaker Pipeline with conditional registration | Executed end to end on SageMaker (all 7 steps succeeded); tuned XGBoost registered as v2 in Model Registry |
 | SageMaker training jobs, hyperparameter tuning, MLflow | Done: 20-trial Bayesian tuning job ([docs/tuning_result.json](docs/tuning_result.json)); runs logged to managed MLflow |
-| Serverless endpoint, Batch Transform | Handler and container verified locally; **cloud deployment pending** |
+| Serverless endpoint, Batch Transform | Done: endpoint invoked and deleted; Batch Transform scores match `evaluate.py` (see below) |
 
 Numbers below come from the SageMaker pipeline run (`scripts/render_results.py` fills them from
 the evaluation output, so they are never hand-copied).
@@ -147,12 +147,35 @@ Request format ([docs/sample_request.json](docs/sample_request.json) is a 12-hou
  "all_hours": false}
 ```
 
-Response (verified against the container; endpoint deployment pending):
+Response from the deployed serverless endpoint (model package v2; saved as
+[docs/sample_response.json](docs/sample_response.json)). The cold start and a warm call returned
+identical scores:
 
 ```json
-{"patient_id": "B_p100013", "iculos": 12, "n_hours": 12, "risk_score": 0.0533,
+{"patient_id": "B_p100013", "iculos": 12, "n_hours": 12, "risk_score": 0.0801,
  "alert": true, "calibrated": true, "model": "xgboost"}
 ```
+
+Reproduce (about a cent; the script deletes the endpoint, config and model, also on failure):
+
+```bash
+uv run python scripts/deploy_endpoint.py        # deploy latest Approved package, invoke, delete
+uv run python scripts/run_batch_transform.py    # Batch Transform over 1,000 hospital B patients
+```
+
+**Batch Transform parity.** 1,000 randomly sampled hospital B patients (37,550 hourly scores) went
+through a network-isolated Batch Transform job in the VPC. Scores match the `evaluate.py` path
+(batch features, same model, same Platt calibration): max absolute difference 3.7e-8, mean
+4.8e-10, no alert flips ([docs/batch_transform_parity.json](docs/batch_transform_parity.json)).
+
+**Deployment notes.**
+- The registered artifact holds only the model; `scripts/deploy_endpoint.py` adds the package's
+  `evaluation.json` (calibration and alert threshold, fit on hospital A) to make the serving bundle.
+- AWS rejects network isolation on serverless endpoints, and CreateEndpoint rejected the VPC config
+  in this setup, so the endpoint runs outside the VPC (training and Batch Transform stay inside,
+  isolated). The container holds no secrets and only serves scoring requests.
+- Docker Desktop's containerd store pushes OCI image manifests, which CreateModel rejects;
+  `scripts/push_image.sh` now requests Docker v2 manifests.
 
 Rows must be consecutive hours (`ICULOS` increasing by 1); other bad input returns HTTP 400.
 

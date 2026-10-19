@@ -1,0 +1,10 @@
+{
+  "transform_job": "sepsis-v2-bt-261019-121905",
+  "model_package_version": 2,
+  "patients": 1000,
+  "missing_patients": 0,
+  "rows": 37550,
+  "max_abs_diff": 3.725290298461914e-08,
+  "mean_abs_diff": 4.753682479639346e-10,
+  "alert_flips": 0
+}

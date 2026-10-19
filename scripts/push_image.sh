@@ -15,10 +15,12 @@ PY
 SHA="$(git rev-parse --short HEAD)"
 [[ -z "$(git status --porcelain src container pyproject.toml)" ]] || SHA="${SHA}-dirty"
 
-docker build -q --platform linux/amd64 --provenance=false --sbom=false \
-  -f container/Dockerfile -t "$REPO:$SHA" -t "$REPO:latest" .
+# Log in first: buildx pushes straight from the build. Docker Desktop's containerd store would
+# otherwise push OCI manifests, which SageMaker CreateModel rejects ("Unsupported manifest media
+# type application/vnd.oci.image.manifest.v1+json"), so request Docker v2 media types explicitly.
 aws --profile "$PROFILE" --region "$REGION" ecr get-login-password |
   docker login --username AWS --password-stdin "${REPO%%/*}" >/dev/null
-docker push -q "$REPO:$SHA" >/dev/null
-docker push -q "$REPO:latest" >/dev/null
+docker buildx build -q --platform linux/amd64 --provenance=false --sbom=false \
+  --output type=registry,oci-mediatypes=false -t "$REPO:$SHA" -t "$REPO:latest" \
+  -f container/Dockerfile . >/dev/null
 echo "$REPO:$SHA"

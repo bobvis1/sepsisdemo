@@ -1,0 +1,9 @@
+{
+ "patient_id": "B_p100013",
+ "iculos": 12,
+ "n_hours": 12,
+ "risk_score": 0.08011478185653687,
+ "alert": true,
+ "calibrated": true,
+ "model": "xgboost"
+}
