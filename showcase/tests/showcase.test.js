@@ -35,6 +35,7 @@ test("2 default numbers match the evaluation and the drawn dots match the counte
     const g = D.grid.B[A_INDEX], s = await state(p);
     for (const k of ["early", "late", "missed", "false_alarm", "quiet"]) assert.equal(s.counts[k], g[k], k);
     assert.equal(g.early / D.cohorts.B.n_septic, ev.septic_alerted_before_onset);
+    assert.equal(await p.$eval(".hero a", (a) => a.href), "https://github.com/bobvis1/sepsisdemo");
   });
 });
 

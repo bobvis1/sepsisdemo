@@ -96,11 +96,11 @@ read them from the file; the table above is just for orientation.
 
   ```
   C="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-  # screenshot at desktop or phone width (use scratchpad paths; file:// URL needs an absolute path)
+  # screenshot (use scratchpad paths; file:// URL needs an absolute path)
   "$C" --headless=new --disable-gpu --no-sandbox --window-size=1440,900 \
        --force-device-scale-factor=2 --virtual-time-budget=4000 \
-       --screenshot=/abs/out.png file:///abs/outputs/showcase/index.html
-  # phone: --window-size=390,844 ; JS errors: add --enable-logging=stderr --v=0 and grep CONSOLE
+       --screenshot=/abs/out.png file:///abs/outputs/showcase/standalone.html
+  # JS errors: add --enable-logging=stderr --v=0 and grep CONSOLE
   ```
 
   Then `Read` the PNG to look at it. `--virtual-time-budget=<ms>` lets timers and animations run
@@ -149,8 +149,10 @@ uv run python -m sepsis.showcase \
     --out outputs/showcase
 ```
 
-It writes `outputs/showcase/data.json` (for inspection) and `outputs/showcase/index.html`
-(template with the data injected, section 7). Keep pure functions separate from I/O so they can
+It writes `outputs/showcase/data.json` (for inspection), `outputs/showcase/index.html` (the
+template with the data injected: the Artifact fragment that gets published, section 7) and
+`outputs/showcase/standalone.html` (the same page inside a doctype/viewport wrapper, for local
+viewing and the browser tests). Keep pure functions separate from I/O so they can
 be tested on the synthetic frames from `tests/helpers.make_df`.
 
 ### 5.1 Scoring
@@ -369,7 +371,7 @@ otherwise).
 
 ### Scene 3: Night shift
 
-- A grid of 20 beds (5 x 4 desktop, 2 columns on phones). Each bed is a small card with a tiny
+- A grid of 20 beds (5 x 4). Each bed is a small card with a tiny
   live risk sparkline.
 - Simulation (in JS, seeded PRNG such as mulberry32 so "same seed = same shift"): each bed is
   assigned a random pool patient starting at a random hour of their stay; when a stay ends, a new
@@ -403,10 +405,9 @@ legend. Caption: "Each row is one septic patient at hospital B, aligned at clini
   Computing in Cardiology Challenge 2019", Critical Care Medicine 48(2):210-217, 2020; Goldberger
   AL et al., PhysioBank, PhysioToolkit, and PhysioNet, Circulation 101(23):e215-e220, 2000.
 
-### Responsive and accessibility
+### Accessibility
 
-Works at 1440 px and at phone width (390 px, 16 px gutters, no horizontal scroll; Scene 1 canvas
-can shrink its height and dot radius). Canvases get `role="img"` and an `aria-label` summarizing
+The page targets desktop browsers. Canvases get `role="img"` and an `aria-label` summarizing
 the current state (for example "At threshold 3.3%: 543 of 1,142 septic patients caught early").
 
 ## 8. Tests
@@ -434,7 +435,7 @@ Run `uv run pytest -q` and `uv run ruff check . && uv run ruff format --check .`
 ### 8.2 Browser tests (`showcase/tests/`), written alongside Phases V2-V3, about 0.75 hour
 
 Real clicks, drags and key presses against the built page, driven by `puppeteer-core` and the
-installed Chrome. They test the built page `outputs/showcase/index.html` and read expected values
+installed Chrome. They test the built page `outputs/showcase/standalone.html` and read expected values
 from `outputs/showcase/data.json`, so run the Python build first. Pytest does not run them; they
 have their own command.
 
@@ -467,46 +468,43 @@ sleeps longer than an animation frame. The full suite should finish in under a m
 
 **Tests (each one small and named after what it proves):**
 
-1. **Loads clean:** no `pageerror` events and no `console.error` messages, at 1440x900 and
-   390x844.
-2. **Phone layout:** at 390 px, `document.documentElement.scrollWidth <= innerWidth` (no
-   horizontal scroll), and every scene is visible when scrolled to.
-3. **Default numbers match the evaluation:** with no URL hooks, the Scene 1 counters show the
+1. **Loads clean:** no `pageerror` events and no `console.error` messages, at 1440x900.
+2. **Default numbers match the evaluation:** with no URL hooks, the Scene 1 counters show the
    grid row for the hospital A threshold in `data.json` (caught early 543 of 1,142, false alarms
    per patient-day, utility, median lead time), the hero numbers match `data.json` meta, and
    `window.__showcase` dot counts equal the counter text.
-4. **Dragging the threshold:** drag the handle right with real mouse events
+3. **Dragging the threshold:** drag the handle right with real mouse events
    (`page.mouse.down/move/up`). The handle's `aria-valuenow` goes up, the caught-early and
    false-alarm counts do not go up, and every counter equals the `data.json` grid row for the new
    threshold. Then drag left past the start and check the opposite.
-5. **Keyboard:** focus the handle, press ArrowRight three times, and the threshold moves exactly
+4. **Keyboard:** focus the handle, press ArrowRight three times, and the threshold moves exactly
    three grid points. Counters match that grid row.
-6. **Reset:** after a drag, the reset button returns to the hospital A threshold and the
+5. **Reset:** after a drag, the reset button returns to the hospital A threshold and the
    default numbers.
-7. **Cohort toggle:** switching to hospital A shows 4,067 patients and the hospital A grid
+6. **Cohort toggle:** switching to hospital A shows 4,067 patients and the hospital A grid
    values; switching back restores hospital B.
-8. **URL hooks:** `?t=<grid value>&cohort=A&still=1` opens in that state (same numbers as getting
+7. **URL hooks:** `?t=<grid value>&cohort=A&still=1` opens in that state (same numbers as getting
    there by clicking).
-9. **Replay:** for each of the 10 replay patients (next button), playing to the end with
+8. **Replay:** for each of the 10 replay patients (next button), playing to the end with
    `speed=50` shows the banner that matches its category, and for early catches the banner's hours
    equal `lead_h` in `data.json`. The drivers card shows three named variables when the alert
    fires.
-10. **Night shift is reproducible and honest:** the same `seed` run twice gives an identical
+9. **Night shift is reproducible and honest:** the same `seed` run twice gives an identical
     tally; under the 0.5 false-alarm budget threshold, "alert episodes started" is at most what
     the utility-optimal threshold gives for the same seed.
-11. **Reduced motion and dark mode:** with `page.emulateMediaFeatures` for
+10. **Reduced motion and dark mode:** with `page.emulateMediaFeatures` for
     `prefers-reduced-motion: reduce`, the page is ready with no intro animation; with
     `prefers-color-scheme: dark` (and `theme=dark`), the computed body background changes and the
     dot colors still come from the dark-mode tokens.
-12. **Screenshots for review (not assertions):** save PNGs of the hero, each scene and the
-    footer at both widths and in both themes to `outputs/showcase/screens/` (git-ignored). Read
+11. **Screenshots for review (not assertions):** save PNGs of the hero, each scene and the
+    footer in both themes to `outputs/showcase/screens/` (git-ignored). Read
     them yourself in Phase V4.
 
 **Run:**
 
 ```
 export PATH=$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/bin:/opt/homebrew/bin:$PATH
-make showcase                       # Python build: data.json + index.html
+make showcase                       # Python build: data.json, index.html, standalone.html
 npm --prefix showcase/tests ci
 npm --prefix showcase/tests test
 ```
@@ -524,7 +522,7 @@ npm --prefix showcase/tests test
    "chart"). The data is derived from an open, de-identified CC BY 4.0 dataset, so a private
    link is fine; the user decides whether to share it. Give the user the link and ask them to
    check: intro animation, threshold drag, A/B toggle, replay of all 10 patients, a couple of
-   shifts, phone width (narrow the browser), and light/dark mode.
+   shifts, and light/dark mode.
 4. Fix what they report; republish to the same file path so the URL stays the same.
 
 ## 10. Phase V5: wire into the repo, about 0.25 hour
@@ -564,9 +562,9 @@ be useful (for example a public `peak_pre` function), add it in `showcase.py` in
 2. Hospital A toggle in Scene 1 (keep B only; keep the A threshold markers)
 3. Vitals strips in Scene 2 (keep risk trace, alert, onset, drivers)
 4. Scene 3 speed control and threshold selector (keep one threshold)
-5. Browser tests 9-11 (keep 1-8 and the screenshots in 12)
+5. Browser tests 8-10 (keep 1-7 and the screenshots in 11)
 
-Never cut: the consistency checks, browser tests 1-8, the "chosen on hospital A" labelling, the
+Never cut: the consistency checks, browser tests 1-7, the "chosen on hospital A" labelling, the
 selection-rule caption, the footer disclaimer and attribution.
 
 ## 13. Reporting

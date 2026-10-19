@@ -10,19 +10,22 @@ than a model with state-of-the-art performance.
 
 ## Interactive results
 
-[**Open the results showcase**](outputs/showcase/standalone.html): drag the alert threshold across all
-20,000 hospital B patients and watch who is caught early, caught late, missed or falsely alarmed, with
-the false alarms per patient-day and challenge utility at each setting. The page is built from the
-registered model's scores and checked against `evaluation.json` when it is generated. The built
-file is not committed (`outputs/` is git-ignored), so generate it first:
+[**Open the interactive results showcase**](https://claude.ai/artifact/LomV6yVikEbVgJqK6SfRRR): drag the
+alert threshold across all 20,000 hospital B patients and watch who is caught early, caught late,
+missed or falsely alarmed; replay individual patients hour by hour; run a simulated night shift at
+two thresholds; and see every septic patient lined up at onset. Every number on the page is checked
+against `evaluation.json` when the page is generated.
+
+To regenerate it locally (the built files are git-ignored, so this writes `outputs/showcase/`, and
+`standalone.html` there opens straight in a browser):
 
 ```bash
-uv run python -m sepsis.showcase --model-dir outputs/pipe2/model \
-    --evaluation outputs/pipe2/eval_xgboost --features data/features \
-    --template showcase/template.html --out outputs/showcase
+make showcase        # build outputs/showcase/ (data.json, index.html, standalone.html)
+make showcase-test   # 14 browser tests in real Chrome (Node 22.12+)
 ```
 
-More scenes are planned in [VIZ_PLAN.md](VIZ_PLAN.md).
+The plan and the browser tests are in [VIZ_PLAN.md](VIZ_PLAN.md) and
+[showcase/tests/](showcase/tests/README.md).
 
 ## Status
 

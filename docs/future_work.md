@@ -13,10 +13,12 @@ Ideas deliberately left out to keep the project finishable. Add to this list as 
 
 ## Operating point (from Phase 6)
 The challenge utility penalises a false alarm at only 0.05 per hour, so the utility-maximising
-threshold alerts on 11-25% of patient-hours (about 2-4 false alarms per non-septic patient-day).
-That is not a clinically usable alert burden. Future work: choose the threshold under a
-false-alarm budget (for example at most 0.5 alerts per patient-day) and report that operating
-point next to the utility-optimal one; consider alert de-duplication (refractory period).
+threshold alerts on 11-25% of patient-hours on the local models and still produces 2.3 false
+alarms per non-septic patient-day on hospital A (0.8 on B) for the tuned model. The results
+showcase now reports a second operating point chosen on hospital A under a budget of 0.5 false
+alarms per patient-day: on hospital B it alerts before onset for 30.3% of septic patients (0.26
+false alarms per patient-day, utility 0.159). Still open: alert de-duplication (a refractory
+period) and choosing the budget from clinical input instead of a round number.
 
 ## SageMaker Clarify (Phase 9)
 Explainability and subgroup results were produced with XGBoost's exact TreeSHAP and the project's
@@ -27,9 +29,6 @@ alternative. Future work: run Clarify SHAP and bias reports as a pipeline step a
 ## From Phase 8 (deployment)
 
 - Make the pipeline's Evaluate step emit the serving bundle (model + `evaluation.json`) and register
-  that, so deployment needs no extra bundling step. (The image problem is fixed: package v3 was
-  registered from a Docker-v2-manifest image and deploys with no override.)
+  that, so deployment needs no extra bundling step.
 - Serverless endpoints with VPC and network isolation: revisit if AWS lifts the restriction; until
   then use an instance-based endpoint if the VPC boundary is required.
-- Batch Transform parity was checked on a 1,000-patient sample for speed; the full 20,000-patient
-  hospital B run is a larger version of the same script (`--n-patients 20000`).

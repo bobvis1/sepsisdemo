@@ -96,6 +96,7 @@ h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); font-weight: 800; line-height: 1.02;
 .stat b { font-family: var(--font-mono); font-weight: 500; font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
 .stat span { color: var(--ink-2); font-size: 0.92rem; max-width: 26ch; }
 .fine { color: var(--ink-3); font-size: 0.88rem; }
+.fine a { color: var(--ink-2); text-underline-offset: 3px; }
 
 /* section heads */
 .sect { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
@@ -196,7 +197,7 @@ footer strong { color: var(--ink); }
       <div class="stat"><b data-testid="hero-lead" id="hero-lead">–</b><span>median warning before clinical onset</span></div>
       <div class="stat"><b data-testid="hero-fa" id="hero-fa">–</b><span>false alarms per non-septic patient-day</span></div>
     </div>
-    <p class="fine">Trained, registered and served on Amazon SageMaker. Hospital A trained and tuned the model; hospital B was never used to choose anything.</p>
+    <p class="fine">Trained, registered and served on Amazon SageMaker. Hospital A trained and tuned the model; hospital B was never used to choose anything. <a href="https://github.com/bobvis1/sepsisdemo" target="_blank" rel="noopener">Read the full project on GitHub</a>.</p>
   </header>
 
   <section class="sect" id="scene-ward" aria-labelledby="ward-h">
