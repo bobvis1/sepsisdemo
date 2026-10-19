@@ -133,7 +133,7 @@ read them from the file; the table above is just for orientation.
   then keep working on what you can. This also applies to anything blocked by the permission
   classifier: explain what the command does and ask the user to run it.
 - Before writing any HTML, load the **`artifact-design`** and **`dataviz`** skills (Skill tool)
-  and follow them: color tokens, light/dark handling, CDN rules, phone-width layout, colorblind-
+  and follow them: color tokens, light/dark handling, CDN rules, colorblind-
   safe categorical palette.
 
 ## 5. Phase V1: data export (`src/sepsis/showcase.py`), about 1 hour

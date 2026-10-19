@@ -136,3 +136,10 @@ def test_end_to_end_build_passes_checks_and_carries_frozen_values(tmp_path):
     S.to_json(data)  # no NaN anywhere
     # the budget threshold is chosen on hospital A: its A false-alarm rate meets the budget
     assert data["budget_results"]["A_val"]["false_alarms_per_patient_day"] <= S.BUDGET_FA_PER_DAY
+
+
+def test_standalone_wraps_the_fragment_without_changing_it():
+    fragment = "<title>t</title><main>x</main>"
+    page = S.standalone(fragment)
+    assert page.startswith("<!doctype html>") and fragment in page and page.endswith("</html>")
+    assert 'name="viewport"' in page

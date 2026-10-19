@@ -410,6 +410,21 @@ def inject_data(template: str, data: dict) -> str:
     return template.replace(PLACEHOLDER, safe)
 
 
+STANDALONE_HEAD = (
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+    "<style>:root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 "
+    "env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}"
+    "img{max-width:100%}[hidden]{display:none!important}</style></head><body>"
+)
+
+
+def standalone(fragment: str) -> str:
+    """Wrap the page the way the Artifact host does (doctype, viewport, reset), for local viewing
+    and browser tests. The fragment itself is what gets published as an Artifact."""
+    return STANDALONE_HEAD + fragment + "</body></html>"
+
+
 # ---- build -------------------------------------------------------------------------------------
 
 
@@ -501,8 +516,10 @@ def main() -> None:
     size = (args.out / "data.json").stat().st_size / 1e6
     print(f"wrote {args.out / 'data.json'} ({size:.2f} MB)")
     if args.template.exists():
-        (args.out / "index.html").write_text(inject_data(args.template.read_text(), data))
-        print(f"wrote {args.out / 'index.html'}")
+        page = inject_data(args.template.read_text(), data)
+        (args.out / "index.html").write_text(page)  # fragment: this is what is published
+        (args.out / "standalone.html").write_text(standalone(page))  # local viewing and tests
+        print(f"wrote {args.out / 'index.html'} and standalone.html")
     else:
         print(f"no template at {args.template}; wrote data.json only")
     b = data["budget_results"]

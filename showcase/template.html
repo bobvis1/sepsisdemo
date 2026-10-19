@@ -1,0 +1,528 @@
+<title>Sepsis Early Warning</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;600;800&display=swap">
+<style>
+/* Layout: one calm column; the dot field is the only loud thing on the page.
+   Outcome colours were checked with the dataviz validator (hue order early, late, missed, false
+   alarm; "quiet" is a deliberate muted neutral and is never the only cue: every colour has a
+   named row with a live count). */
+:root {
+  --bg: #eef2f3;
+  --panel: #fcfcfb;
+  --ink: #11202a;
+  --ink-2: #3c4f5a;
+  --ink-3: #5f7380;
+  --rule: #d5dde0;
+  --thr: #11202a;
+  --c-early: #1f5fbf;
+  --c-late: #1f9fb8;
+  --c-missed: #c8334e;
+  --c-fa: #d99a00;
+  --c-quiet: #a9b6bb;
+  --c-idle: #b9c4c8;
+  --focus: #1f5fbf;
+  --font-display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1215;
+    --panel: #121b1f;
+    --ink: #e6eef1;
+    --ink-2: #b3c3ca;
+    --ink-3: #8ba0a9;
+    --rule: #25343a;
+    --thr: #e6eef1;
+    --c-early: #3a78dd;
+    --c-late: #22a6a8;
+    --c-missed: #e0526b;
+    --c-fa: #bd8a12;
+    --c-quiet: #4b5c63;
+    --c-idle: #3a4a50;
+    --focus: #7db0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1215;
+  --panel: #121b1f;
+  --ink: #e6eef1;
+  --ink-2: #b3c3ca;
+  --ink-3: #8ba0a9;
+  --rule: #25343a;
+  --thr: #e6eef1;
+  --c-early: #3a78dd;
+  --c-late: #22a6a8;
+  --c-missed: #e0526b;
+  --c-fa: #bd8a12;
+  --c-quiet: #4b5c63;
+  --c-idle: #3a4a50;
+  --focus: #7db0ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3, p { margin: 0; }
+h1, h2 { text-wrap: balance; letter-spacing: -0.02em; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* hero */
+.hero { display: flex; flex-direction: column; gap: 22px; padding-top: 12px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); font-weight: 800; line-height: 1.02; max-width: 16ch; }
+.lede { font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: var(--ink-2); max-width: 46ch; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 28px; border-top: 1px solid var(--rule); padding-top: 18px; }
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat b { font-family: var(--font-mono); font-weight: 500; font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.stat span { color: var(--ink-2); font-size: 0.92rem; max-width: 26ch; }
+.fine { color: var(--ink-3); font-size: 0.88rem; }
+
+/* section heads */
+.sect { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.sect-head { display: flex; flex-direction: column; gap: 6px; max-width: 62ch; }
+h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 800; }
+.sect-head p { color: var(--ink-2); }
+
+/* controls */
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; border-right: 1px solid var(--rule); background: transparent; color: var(--ink-2); font: inherit; font-size: 0.9rem; padding: 8px 14px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.btn { border: 1px solid var(--rule); background: var(--panel); color: var(--ink); font: inherit; font-size: 0.9rem; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+.btn:hover { border-color: var(--ink-3); }
+.ops { display: flex; flex-wrap: wrap; gap: 8px; }
+.ops .btn[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+
+/* the ward */
+.ward { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+.field { position: relative; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; min-width: 0; touch-action: pan-y; }
+.field canvas { display: block; width: 100%; }
+.handle { position: absolute; top: 0; width: 28px; margin-left: -14px; cursor: ew-resize; display: flex; justify-content: center; opacity: 1; touch-action: none; }
+.handle[hidden] { display: none; }
+.handle::after { content: ""; position: absolute; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--thr); border: 2px solid var(--panel); }
+.tip { position: absolute; z-index: 3; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; padding: 5px 8px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, -130%); }
+.note { color: var(--ink-3); font-size: 0.85rem; max-width: 74ch; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel h3 { font-size: 0.78rem; font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.sw { width: 12px; height: 12px; border-radius: 2px; align-self: center; }
+.row .nm { color: var(--ink-2); font-size: 0.93rem; min-width: 0; }
+.row .v { font-family: var(--font-mono); font-size: 0.88rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rule { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+.kv { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.kv .nm { color: var(--ink-2); font-size: 0.93rem; }
+.kv .v { font-family: var(--font-mono); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.status { color: var(--ink-2); font-size: 0.95rem; min-height: 1.5em; }
+
+/* footer */
+footer { border-top: 1px solid var(--rule); padding-top: 22px; display: flex; flex-direction: column; gap: 12px; color: var(--ink-2); font-size: 0.9rem; max-width: 80ch; }
+footer strong { color: var(--ink); }
+.cite { color: var(--ink-3); font-size: 0.82rem; }
+
+@media (max-width: 900px) { .ward { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main class="page">
+  <header class="hero">
+    <p class="eyebrow">Hourly sepsis early-warning model · PhysioNet 2019</p>
+    <h1>Can a model see sepsis coming?</h1>
+    <p class="lede">An hourly early-warning model trained on one hospital and tested, untouched, on 20,000 patients from another.</p>
+    <div class="stats">
+      <div class="stat"><b data-testid="hero-patients" id="hero-patients">–</b><span>patients evaluated at the external hospital</span></div>
+      <div class="stat"><b data-testid="hero-caught" id="hero-caught">–</b><span>of septic patients alerted before onset</span></div>
+      <div class="stat"><b data-testid="hero-lead" id="hero-lead">–</b><span>median warning before clinical onset</span></div>
+      <div class="stat"><b data-testid="hero-fa" id="hero-fa">–</b><span>false alarms per non-septic patient-day</span></div>
+    </div>
+    <p class="fine">Trained, registered and served on Amazon SageMaker. Hospital A trained and tuned the model; hospital B was never used to choose anything.</p>
+  </header>
+
+  <section class="sect" id="scene-ward" aria-labelledby="ward-h">
+    <div class="sect-head">
+      <h2 id="ward-h">The ward</h2>
+      <p>Each dot is one patient, placed by the highest risk the model gave them during their stay. Septic patients sit above the line, everyone else below. Drag the threshold to decide when the alarm would sound.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Hospital">
+        <button type="button" id="cohort-B" data-testid="cohort-B" aria-pressed="true">Hospital B · external test</button>
+        <button type="button" id="cohort-A" data-testid="cohort-A" aria-pressed="false">Hospital A · validation</button>
+      </div>
+      <div class="ops" role="group" aria-label="Operating points chosen on hospital A">
+        <button type="button" class="btn" id="op-a" data-testid="op-a" aria-pressed="true">Utility-optimal (chosen on A)</button>
+        <button type="button" class="btn" id="op-budget" data-testid="op-budget" aria-pressed="false">0.5 false alarms/day budget (chosen on A)</button>
+      </div>
+      <button type="button" class="btn" id="reset" data-testid="reset">Reset to hospital A threshold</button>
+    </div>
+    <div class="ward">
+      <div>
+        <div class="field" id="field">
+          <canvas id="ward-canvas" role="img" aria-label="Patients by peak predicted risk"></canvas>
+          <div class="handle" id="handle" role="slider" tabindex="0" data-testid="threshold-handle" aria-label="Alert threshold" aria-orientation="horizontal" hidden></div>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <p class="note" id="field-note"></p>
+      </div>
+      <div class="panel" aria-live="off">
+        <h3>At this threshold</h3>
+        <ul class="rows" id="cat-rows"></ul>
+        <hr class="rule">
+        <div class="kv"><span class="nm">Threshold</span><span class="v" data-testid="metric-threshold" id="m-thr"></span></div>
+        <div class="kv"><span class="nm">False alarms per patient-day</span><span class="v" data-testid="metric-fa" id="m-fa"></span></div>
+        <div class="kv"><span class="nm">Challenge utility</span><span class="v" data-testid="metric-utility" id="m-util"></span></div>
+        <div class="kv"><span class="nm">Median warning</span><span class="v" data-testid="metric-lead" id="m-lead"></span></div>
+      </div>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite" data-testid="status"></p>
+  </section>
+
+  <footer>
+    <p><strong>Research demonstration. Not for clinical use.</strong></p>
+    <p>Method: the challenge label turns on 6 hours before clinical onset, so onset is the first positive hour plus 6. The model's calibration and the alert threshold were fit on hospital A only. Hospital B was used only to evaluate. Every number on this page reproduces the evaluation file the model was scored with.</p>
+    <p class="cite">Data: PhysioNet/Computing in Cardiology Challenge 2019, CC BY 4.0. Reyna MA et al., "Early Prediction of Sepsis From Clinical Data: The PhysioNet/Computing in Cardiology Challenge 2019", Critical Care Medicine 48(2):210-217, 2020. Goldberger AL et al., "PhysioBank, PhysioToolkit, and PhysioNet", Circulation 101(23):e215-e220, 2000.</p>
+  </footer>
+</main>
+
+<script id="showcase-data" type="application/json">__SHOWCASE_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("showcase-data").textContent);
+  var q = new URLSearchParams(location.search);
+  var hooks = {
+    t: q.get("t"), cohort: q.get("cohort"), theme: q.get("theme"),
+    still: q.get("still") === "1", speed: parseFloat(q.get("speed")) || 1,
+    seed: q.get("seed"), scene2: q.get("scene2"), hour: q.get("hour")
+  };
+  if (hooks.theme === "dark" || hooks.theme === "light") document.documentElement.dataset.theme = hooks.theme;
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var skipAnim = hooks.still || reduceMotion;
+
+  var CATS = D.meta.categories; // early, late, missed, false_alarm, quiet
+  var CAT_NAME = {
+    early: "Caught early", late: "Caught late", missed: "Missed",
+    false_alarm: "False alarm", quiet: "Quiet"
+  };
+  var CAT_CSS = ["--c-early", "--c-late", "--c-missed", "--c-fa", "--c-quiet"];
+  var CAT_HELP = [
+    "septic, alert before onset", "septic, first alert at or after onset", "septic, never alerted",
+    "not septic, alerted at least once", "not septic, never alerted"
+  ];
+  var T = D.thresholds, NT = T.length, LOG_MIN = Math.log10(D.meta.risk_floor);
+  var A_INDEX = T.indexOf(D.meta.threshold), BUDGET_INDEX = T.indexOf(D.meta.budget_threshold);
+  var COHORT_KEYS = { B: "B", A_val: "A_val" }; // state.cohort is already the data key
+  var COHORT_TITLE = { B: "Hospital B", A_val: "Hospital A" };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { cohort: "B", ti: A_INDEX, dragging: false, ready: false };
+  var colors = {}, ctx, canvas = $("ward-canvas"), field = $("field"), handle = $("handle"), tip = $("tip");
+  var geo = { W: 0, H: 0, left: 0, right: 0, top: 0, bottom: 0, axisY: 0, half: 0, dpr: 1 };
+  var px = null, py = null, cats = null, grid = null, fade = 1, intro = null, drawnCounts = [0, 0, 0, 0, 0];
+
+  // ---- formatting ---------------------------------------------------------------------------
+  function fmtInt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function pct(v, d) { return (100 * v).toFixed(d == null ? 1 : d) + "%"; }
+  function riskPct(t) { var p = 100 * t; return (p < 10 ? p.toPrecision(3) : p.toPrecision(3)) + "%"; }
+
+  // ---- hero numbers (from evaluation.json via the build) -----------------------------------
+  var EVB = D.meta.evaluation.B;
+  function heroText() {
+    return {
+      "hero-patients": fmtInt(EVB.n_patients),
+      "hero-caught": pct(EVB.septic_alerted_before_onset),
+      "hero-lead": (EVB.median_lead_time_h % 1 ? EVB.median_lead_time_h.toFixed(1) : String(EVB.median_lead_time_h)) + " h",
+      "hero-fa": EVB.false_alarms_per_patient_day.toFixed(2)
+    };
+  }
+  function countUp(done) {
+    var final = heroText(), ids = Object.keys(final);
+    ids.forEach(function (id) { $(id).textContent = final[id]; });
+    if (skipAnim) return done();
+    var targets = {
+      "hero-patients": [EVB.n_patients, fmtInt], "hero-caught": [100 * EVB.septic_alerted_before_onset, function (v) { return v.toFixed(1) + "%"; }],
+      "hero-lead": [EVB.median_lead_time_h, function (v) { return Math.round(v) + " h"; }], "hero-fa": [EVB.false_alarms_per_patient_day, function (v) { return v.toFixed(2); }]
+    };
+    var t0 = performance.now(), dur = 900 / hooks.speed;
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      ids.forEach(function (id) { $(id).textContent = k < 1 ? targets[id][1](targets[id][0] * e) : final[id]; });
+      if (k < 1) requestAnimationFrame(step); else done();
+    })(t0);
+  }
+
+  // ---- colours (read from the active theme's tokens) ----------------------------------------
+  function readColors() {
+    var cs = getComputedStyle(document.documentElement);
+    var g = function (n) { return cs.getPropertyValue(n).trim(); };
+    colors = {
+      cat: CAT_CSS.map(g), idle: g("--c-idle"), ink: g("--ink"), ink2: g("--ink-2"), ink3: g("--ink-3"),
+      rule: g("--rule"), thr: g("--thr"), panel: g("--panel")
+    };
+    document.querySelectorAll("[data-cat]").forEach(function (el) { el.style.background = colors.cat[+el.dataset.cat]; });
+  }
+
+  // ---- geometry -----------------------------------------------------------------------------
+  function cohort() { return D.cohorts[COHORT_KEYS[state.cohort]]; }
+  function xOf(t) { return geo.left + ((Math.log10(Math.min(Math.max(t, D.meta.risk_floor), 1)) - LOG_MIN) / -LOG_MIN) * (geo.W - geo.left - geo.right); }
+  function layout() {
+    var W = field.clientWidth || 800, narrow = W < 560;
+    geo.W = W; geo.H = narrow ? 370 : Math.round(Math.min(590, Math.max(420, W * 0.46)));
+    geo.left = narrow ? 14 : 22; geo.right = 18; geo.top = 62; geo.bottom = 54;
+    geo.axisY = geo.top + (geo.H - geo.top - geo.bottom) / 2; geo.half = (geo.H - geo.top - geo.bottom) / 2 - 8;
+    geo.dpr = window.devicePixelRatio || 1; geo.dot = narrow ? 1.6 : 1.9;
+    canvas.width = Math.round(W * geo.dpr); canvas.height = Math.round(geo.H * geo.dpr);
+    canvas.style.height = geo.H + "px";
+    ctx = canvas.getContext("2d"); ctx.setTransform(geo.dpr, 0, 0, geo.dpr, 0, 0);
+    handle.style.height = (geo.H - geo.top - geo.bottom + 18) + "px"; handle.style.top = (geo.top - 12) + "px";
+    var c = cohort(), n = c.n;
+    px = new Float32Array(n); py = new Float32Array(n);
+    for (var i = 0; i < n; i++) {
+      px[i] = xOf(c.x[i]);
+      py[i] = c.septic[i] ? geo.axisY - 6 - c.y[i] * geo.half : geo.axisY + 6 + c.y[i] * geo.half;
+    }
+    buildIndex();
+  }
+  var cellMap = null, CELL = 10;
+  function buildIndex() {
+    cellMap = {};
+    for (var i = 0; i < px.length; i++) {
+      var k = ((px[i] / CELL) | 0) + "," + ((py[i] / CELL) | 0);
+      (cellMap[k] || (cellMap[k] = [])).push(i);
+    }
+  }
+
+  // ---- categories as drawn, recomputed in the browser from the exported arrays ----------------
+  function categorize(t) {
+    var c = cohort(), n = c.n, out = new Uint8Array(n), counts = [0, 0, 0, 0, 0];
+    for (var i = 0; i < n; i++) {
+      var k, x = c.x[i], pk = c.peak_all[i];
+      if (c.septic[i]) k = x >= t ? 0 : pk >= t ? 1 : 2; else k = pk >= t ? 3 : 4;
+      out[i] = k; counts[k]++;
+    }
+    cats = out; drawnCounts = counts;
+  }
+
+  // ---- drawing --------------------------------------------------------------------------------
+  function drawAxes() {
+    var inner = geo.W - geo.left - geo.right;
+    ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--font-mono");
+    ctx.textBaseline = "alphabetic";
+    ctx.strokeStyle = colors.rule; ctx.fillStyle = colors.ink3; ctx.lineWidth = 1;
+    [[1e-4, "0.01%"], [1e-3, "0.1%"], [1e-2, "1%"], [1e-1, "10%"], [1, "100%"]].forEach(function (tk) {
+      var x = Math.round(xOf(tk[0])) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x, geo.top - 6); ctx.lineTo(x, geo.H - geo.bottom + 6); ctx.stroke();
+      ctx.textAlign = tk[0] === 1e-4 ? "left" : tk[0] === 1 ? "right" : "center";
+      ctx.fillText(tk[1], x, geo.H - geo.bottom + 20);
+    });
+    ctx.textAlign = "center"; ctx.fillText("peak predicted risk (log scale)", geo.left + inner / 2, geo.H - 8);
+    ctx.strokeStyle = colors.ink3; ctx.beginPath(); ctx.moveTo(geo.left, geo.axisY + 0.5); ctx.lineTo(geo.W - geo.right, geo.axisY + 0.5); ctx.stroke();
+    var c = cohort(); ctx.textAlign = "left"; ctx.fillStyle = colors.ink2;
+    ctx.fillText("Septic · " + fmtInt(c.n_septic), geo.left + 4, geo.top + 12);
+    ctx.fillText("Not septic · " + fmtInt(c.n - c.n_septic), geo.left + 4, geo.H - geo.bottom - 6 + 0);
+  }
+  function drawMarkers() {
+    ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--font-mono");
+    [[A_INDEX, "utility-optimal (A)", "right"], [BUDGET_INDEX, "0.5/day budget (A)", "left"]].forEach(function (m) {
+      var x = xOf(T[m[0]]);
+      ctx.strokeStyle = colors.ink3; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, geo.axisY); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = colors.ink3; ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x - 4, 12); ctx.lineTo(x + 4, 12); ctx.fill();
+      ctx.textAlign = m[2]; ctx.fillText(m[1], x + (m[2] === "right" ? 5 : -5), 22 - 12);
+    });
+  }
+  function drawDots(reveal, fall) {
+    var n = px.length, s = geo.dot, i, k;
+    ctx.globalAlpha = fade;
+    if (reveal === null) { // static: five fills
+      for (k = 0; k < 5; k++) {
+        ctx.fillStyle = colors.cat[k]; ctx.globalAlpha = fade * (k === 4 ? 0.55 : 1);
+        for (i = 0; i < n; i++) if (cats[i] === k) ctx.fillRect(px[i] - s / 2, py[i] - s / 2, s, s);
+      }
+    } else { // intro: grey until the sweep passes, falling in
+      ctx.fillStyle = colors.idle; ctx.globalAlpha = fade * 0.7;
+      for (i = 0; i < n; i++) if (px[i] > reveal) { var yy = fall(i); if (yy !== null) ctx.fillRect(px[i] - s / 2, yy - s / 2, s, s); }
+      for (k = 0; k < 5; k++) {
+        ctx.fillStyle = colors.cat[k]; ctx.globalAlpha = fade * (k === 4 ? 0.55 : 1);
+        for (i = 0; i < n; i++) if (cats[i] === k && px[i] <= reveal) { var y2 = fall(i); if (y2 !== null) ctx.fillRect(px[i] - s / 2, y2 - s / 2, s, s); }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  function draw() {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, geo.W, geo.H);
+    var thrX = xOf(T[state.ti]), reveal = null, fall = null;
+    drawAxes();
+    if (!intro || intro.elapsed > 1.5) drawMarkers();
+    if (intro) {
+      var e = intro.elapsed;
+      fall = function (i) {
+        var d = ((i * 2654435761) >>> 0) / 4294967296 * 0.7; // deterministic stagger
+        var k = Math.min(1, Math.max(0, (e - d) / 0.9));
+        if (k <= 0) return null;
+        var ease = 1 - Math.pow(1 - k, 3);
+        return py[i] - (1 - ease) * (py[i] + 20);
+      };
+      var s = Math.min(1, Math.max(0, (e - 1.5) / 1.1));
+      reveal = geo.left + (geo.W - geo.left - geo.right) * s * 1.02;
+      thrX = geo.W - geo.right + (xOf(T[state.ti]) - (geo.W - geo.right)) * (1 - Math.pow(1 - s, 3));
+      if (s === 0) thrX = -10;
+    }
+    drawDots(reveal, fall);
+    if (thrX > 0) {
+      ctx.strokeStyle = colors.thr; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(thrX, geo.top - 8); ctx.lineTo(thrX, geo.H - geo.bottom + 4); ctx.stroke();
+      ctx.fillStyle = colors.thr; ctx.textAlign = "center";
+      ctx.fillText(riskPct(T[state.ti]), Math.min(Math.max(thrX, 28), geo.W - 28), geo.top - 22);
+    }
+  }
+
+  // ---- numbers and text -----------------------------------------------------------------------
+  function buildRows() {
+    var ul = $("cat-rows"); ul.textContent = "";
+    CATS.forEach(function (name, k) {
+      var li = document.createElement("li"); li.className = "row"; li.title = CAT_HELP[k];
+      li.innerHTML = '<span class="sw" data-cat="' + k + '"></span><span class="nm">' + CAT_NAME[name] +
+        '</span><span class="v" data-testid="count-' + name + '" id="v-' + name + '"></span>';
+      ul.appendChild(li);
+    });
+  }
+  function updateNumbers() {
+    var key = COHORT_KEYS[state.cohort], c = D.cohorts[key], g = D.grid[key][state.ti], ns = c.n_septic, nn = c.n - ns;
+    var v = function (id, s) { $(id).textContent = s; };
+    v("v-early", fmtInt(g.early) + " of " + fmtInt(ns) + " (" + pct(g.early / ns) + ")");
+    v("v-late", fmtInt(g.late) + " of " + fmtInt(ns) + " (" + pct(g.late / ns) + ")");
+    v("v-missed", fmtInt(g.missed) + " of " + fmtInt(ns) + " (" + pct(g.missed / ns) + ")");
+    v("v-false_alarm", fmtInt(g.false_alarm) + " of " + fmtInt(nn) + " (" + pct(g.false_alarm / nn) + ")");
+    v("v-quiet", fmtInt(g.quiet) + " of " + fmtInt(nn) + " (" + pct(g.quiet / nn) + ")");
+    v("m-thr", riskPct(T[state.ti]));
+    v("m-fa", g.false_alarms_per_patient_day.toFixed(2));
+    v("m-util", g.utility.toFixed(3));
+    v("m-lead", g.median_lead_time_h == null ? "n/a" : g.median_lead_time_h + " h");
+    handle.setAttribute("aria-valuemin", T[0]); handle.setAttribute("aria-valuemax", T[NT - 1]);
+    handle.setAttribute("aria-valuenow", T[state.ti]);
+    handle.setAttribute("aria-valuetext", riskPct(T[state.ti]) + " risk threshold, " + fmtInt(g.early) + " of " + fmtInt(ns) + " septic patients caught early");
+    handle.style.left = xOf(T[state.ti]) + "px";
+    var text = COHORT_TITLE[key] + " at a " + riskPct(T[state.ti]) + " threshold: " + fmtInt(g.early) + " of " + fmtInt(ns) +
+      " septic patients caught early, " + g.false_alarms_per_patient_day.toFixed(2) + " false alarms per non-septic patient-day.";
+    $("status").textContent = text; canvas.setAttribute("aria-label", text);
+    $("op-a").setAttribute("aria-pressed", String(state.ti === A_INDEX));
+    $("op-budget").setAttribute("aria-pressed", String(state.ti === BUDGET_INDEX));
+    $("cohort-B").setAttribute("aria-pressed", String(state.cohort === "B"));
+    $("cohort-A").setAttribute("aria-pressed", String(state.cohort === "A_val"));
+    $("field-note").textContent = (state.cohort === "B"
+      ? "Hospital B is the external test set: the model never saw it. The two triangles mark thresholds chosen on hospital A; the line you drag here is for exploring, not a re-tuned operating point. "
+      : "Hospital A is where the model was tuned and the threshold was chosen, so it looks better here than on hospital B. ") +
+      "Heights are not to scale between the two groups.";
+    for (var k = 0; k < 5; k++) if (drawnCounts[k] !== g[CATS[k]]) {
+      console.error("drawn count differs from the grid for " + CATS[k] + ": " + drawnCounts[k] + " vs " + g[CATS[k]]);
+    }
+  }
+  function refresh() { categorize(T[state.ti]); updateNumbers(); draw(); }
+
+  // ---- interaction ----------------------------------------------------------------------------
+  function nearestIndex(t) {
+    var best = 0, lt = Math.log10(t), d = Infinity;
+    for (var i = 0; i < NT; i++) { var e = Math.abs(Math.log10(T[i]) - lt); if (e < d) { d = e; best = i; } }
+    return best;
+  }
+  function indexAtClientX(cx) {
+    var r = canvas.getBoundingClientRect(), x = cx - r.left, inner = geo.W - geo.left - geo.right;
+    var lx = LOG_MIN + Math.min(1, Math.max(0, (x - geo.left) / inner)) * -LOG_MIN;
+    return nearestIndex(Math.pow(10, lx));
+  }
+  function setIndex(i) { state.ti = Math.max(0, Math.min(NT - 1, i)); refresh(); }
+  function setCohort(key) {
+    if (state.cohort === key) return;
+    fade = 0; state.cohort = key; layout(); refresh();
+    if (skipAnim) { fade = 1; draw(); return; }
+    var t0 = performance.now(); (function step(now) {
+      fade = Math.min(1, (now - t0) / (260 / hooks.speed)); draw(); if (fade < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  field.addEventListener("pointerdown", function (e) {
+    if (e.button !== 0 || intro) return;
+    state.dragging = true; tip.hidden = true;
+    try { field.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointers */ }
+    setIndex(indexAtClientX(e.clientX)); handle.focus({ preventScroll: true });
+  });
+  field.addEventListener("pointermove", function (e) {
+    if (state.dragging) { setIndex(indexAtClientX(e.clientX)); return; }
+    hover(e);
+  });
+  function endDrag() { state.dragging = false; }
+  field.addEventListener("pointerup", endDrag); field.addEventListener("pointercancel", endDrag);
+  field.addEventListener("pointerleave", function () { if (!state.dragging) tip.hidden = true; });
+  handle.addEventListener("keydown", function (e) {
+    var step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[e.key];
+    if (step) { e.preventDefault(); setIndex(state.ti + step); }
+    else if (e.key === "Home") { e.preventDefault(); setIndex(0); }
+    else if (e.key === "End") { e.preventDefault(); setIndex(NT - 1); }
+  });
+  function hover(e) {
+    if (intro || !cellMap) return;
+    var r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, best = -1, bd = 36;
+    for (var cx = ((x - 6) / CELL) | 0; cx <= ((x + 6) / CELL) | 0; cx++)
+      for (var cy = ((y - 6) / CELL) | 0; cy <= ((y + 6) / CELL) | 0; cy++) {
+        var list = cellMap[cx + "," + cy]; if (!list) continue;
+        for (var j = 0; j < list.length; j++) { var i = list[j], d = (px[i] - x) * (px[i] - x) + (py[i] - y) * (py[i] - y); if (d < bd) { bd = d; best = i; } }
+      }
+    if (best < 0) { tip.hidden = true; return; }
+    var c = cohort();
+    tip.textContent = CAT_NAME[CATS[cats[best]]] + " · peak risk " + riskPct(c.x[best]);
+    tip.style.left = px[best] + "px"; tip.style.top = py[best] + "px"; tip.hidden = false;
+  }
+  $("reset").addEventListener("click", function () { setIndex(A_INDEX); });
+  $("op-a").addEventListener("click", function () { setIndex(A_INDEX); });
+  $("op-budget").addEventListener("click", function () { setIndex(BUDGET_INDEX); });
+  $("cohort-B").addEventListener("click", function () { setCohort("B"); });
+  $("cohort-A").addEventListener("click", function () { setCohort("A_val"); });
+  window.addEventListener("resize", function () { layout(); refresh(); });
+  if (window.ResizeObserver) new ResizeObserver(function () { if (Math.abs(field.clientWidth - geo.W) > 1) { layout(); refresh(); } }).observe(field);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { readColors(); draw(); });
+  new MutationObserver(function () { readColors(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---- start ----------------------------------------------------------------------------------
+  function finish() {
+    intro = null; handle.hidden = false; layout(); refresh(); readColors(); draw();
+    state.ready = true; document.body.dataset.ready = "1";
+  }
+  function runIntro(done) {
+    if (skipAnim) return done();
+    intro = { elapsed: 0 }; var last = performance.now();
+    (function step(now) {
+      intro.elapsed += ((now - last) / 1000) * hooks.speed; last = now; draw();
+      if (intro.elapsed < 2.8) requestAnimationFrame(step); else done();
+    })(last);
+  }
+  buildRows(); readColors();
+  if (hooks.cohort === "A" || hooks.cohort === "A_val") state.cohort = "A_val";
+  if (hooks.t != null && isFinite(parseFloat(hooks.t))) state.ti = nearestIndex(parseFloat(hooks.t));
+  layout(); refresh(); readColors(); draw();
+  var pending = 2, one = function () { if (--pending === 0) finish(); };
+  countUp(one); runIntro(one);
+
+  // Read-only view of what the canvas hides from the DOM; the page itself never reads it.
+  Object.defineProperty(window, "__showcase", {
+    get: function () {
+      return Object.freeze({
+        threshold: T[state.ti], thresholdIndex: state.ti, cohort: state.cohort,
+        counts: Object.freeze(CATS.reduce(function (o, name, k) { o[name] = drawnCounts[k]; return o; }, {})),
+        ready: state.ready, hooks: hooks
+      });
+    }
+  });
+})();
+</script>
