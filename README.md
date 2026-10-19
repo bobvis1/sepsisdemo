@@ -208,8 +208,17 @@ Design choices: no NAT gateway and no interface endpoints (S3 gateway endpoint o
 serverless inference and Batch Transform instead of real-time endpoints, an AWS Budgets alarm, and
 a teardown script. Approximate running costs: one KMS key about $1 per month, S3 and ECR storage
 cents per month, a Processing or Training run cents, managed MLflow about $0.60 per hour while the
-tracking server exists (off by default). Actual spend to date: *to be filled from Cost Explorer at
-project close.*
+tracking server exists (off by default). **Actual spend (project close, 2026-10-19).**
+Cost Explorer (unblended, October, whole account) showed **$0.07** through 18 October and the early
+part of 19 October: ECR $0.02, KMS $0.02, S3 $0.02, SageMaker $0.01. Cost Explorer lags by up to a
+day, so it does not yet include 19 October's jobs or the MLflow server; re-check it after 21 October
+for the final figure. Until then, my estimate for the whole project is **about $4 to $5**, mostly
+the managed MLflow server (created 08:17, torn down about 14:30, roughly 6.3 hours at the
+$0.60 per hour list price I used above, about $3.80). The rest is a few cents per job: three
+pipeline runs, a 20-trial tuning job (about $0.20, on-demand because Spot had no capacity), two
+Batch Transform runs and two short serverless endpoint deployments. The estimate for the jobs
+is from instance-hours, not from the bill. The $0.60 per hour is not verified against the AWS
+price list.
 
 ## Limitations
 
