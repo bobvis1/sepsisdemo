@@ -8,6 +8,22 @@ than a model with state-of-the-art performance.
 
 > **Research demonstration only. Not a medical device and not for clinical use.**
 
+## Interactive results
+
+[**Open the results showcase**](outputs/showcase/standalone.html): drag the alert threshold across all
+20,000 hospital B patients and watch who is caught early, caught late, missed or falsely alarmed, with
+the false alarms per patient-day and challenge utility at each setting. The page is built from the
+registered model's scores and checked against `evaluation.json` when it is generated. The built
+file is not committed (`outputs/` is git-ignored), so generate it first:
+
+```bash
+uv run python -m sepsis.showcase --model-dir outputs/pipe2/model \
+    --evaluation outputs/pipe2/eval_xgboost --features data/features \
+    --template showcase/template.html --out outputs/showcase
+```
+
+More scenes are planned in [VIZ_PLAN.md](VIZ_PLAN.md).
+
 ## Status
 
 | Piece | State |
