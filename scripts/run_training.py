@@ -22,16 +22,7 @@ from sagemaker.core.helper.session_helper import Session
 from sagemaker.train.configs import InputData
 
 from sepsis.config import boto_session, load_infra, load_settings
-from sepsis.sm_common import hp_to_args, make_trainer
-
-
-def latest_features_prefix(s3, bucket: str) -> str:
-    """Most recent features/<job>/ prefix (Processing job names embed a timestamp)."""
-    resp = s3.list_objects_v2(Bucket=bucket, Prefix="features/", Delimiter="/")
-    prefixes = sorted(p["Prefix"] for p in resp.get("CommonPrefixes", []))
-    if not prefixes:
-        raise SystemExit("No features/ output found; run scripts/run_processing.py first")
-    return prefixes[-1].rstrip("/")
+from sepsis.sm_common import hp_to_args, latest_features_prefix, make_trainer
 
 
 def read_job_output(s3, model_artifacts_uri: str) -> dict[str, dict]:

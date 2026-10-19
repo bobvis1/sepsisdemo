@@ -116,3 +116,12 @@ def hp_to_args(hp: list[str]) -> list[str]:
         k, v = kv.split("=", 1)
         out += [f"--{k.replace('_', '-')}", v]
     return out
+
+
+def latest_features_prefix(s3, bucket: str) -> str:
+    """Most recent features/<job>/ prefix (Processing job names embed a timestamp)."""
+    resp = s3.list_objects_v2(Bucket=bucket, Prefix="features/", Delimiter="/")
+    prefixes = sorted(p["Prefix"] for p in resp.get("CommonPrefixes", []))
+    if not prefixes:
+        raise SystemExit("No features/ output found; run scripts/run_processing.py first")
+    return prefixes[-1].rstrip("/")

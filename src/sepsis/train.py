@@ -1,7 +1,9 @@
 """Train the logistic-regression baseline or XGBoost on hospital A features.
 
 Runs identically locally and as a SageMaker training job (channels under /opt/ml/input/data,
-model to /opt/ml/model). Hyperparameters arrive as `--name value` arguments.
+model to /opt/ml/model). Hyperparameters arrive as `--name value` arguments, or, in a tuning job
+(which cannot override the container entrypoint), as SageMaker's hyperparameters.json via the
+`--from-sm-config` flag that container/train passes.
 
     python -m sepsis.train --model xgboost --train data/features_500/train \
         --validation data/features_500/validation --model-dir outputs/xgb
@@ -15,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 
 import joblib
@@ -48,7 +51,21 @@ def evaluate(y: np.ndarray, p: np.ndarray) -> dict[str, float]:
     return {"auroc": float(roc_auc_score(y, p)), "auprc": float(average_precision_score(y, p))}
 
 
-def main() -> None:
+def sm_hyperparameters_argv(path: Path = SM / "input/config/hyperparameters.json") -> list[str]:
+    """Turn SageMaker's hyperparameters.json into `--name value` arguments.
+
+    Values are strings, sometimes JSON-quoted. SageMaker adds housekeeping keys (`_tuning_*`,
+    `sagemaker_*`) that are not ours; skip them.
+    """
+    argv: list[str] = []
+    for key, value in json.loads(path.read_text()).items():
+        if key.startswith(("_", "sagemaker_")):
+            continue
+        argv += [f"--{key.replace('_', '-')}", str(value).strip('"')]
+    return argv
+
+
+def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=["logreg", "xgboost"], required=True)
     ap.add_argument("--train", type=Path, default=SM / "input/data/train")
@@ -65,7 +82,7 @@ def main() -> None:
     ap.add_argument("--min-child-weight", type=float, default=1.0)
     ap.add_argument("--num-round", type=int, default=500)
     ap.add_argument("--early-stopping-rounds", type=int, default=30)
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     tr, va = load(args.train), load(args.validation)
     cols = feature_columns(tr)
@@ -116,4 +133,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    cli = sys.argv[1:]
+    main(sm_hyperparameters_argv() if cli == ["--from-sm-config"] else cli)

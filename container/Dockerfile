@@ -19,6 +19,10 @@ COPY third_party /opt/sepsis/third_party
 ENV SEPSIS_THIRD_PARTY=/opt/sepsis/third_party
 RUN pip install --no-deps /opt/sepsis
 
+# Training entry point for tuning jobs, which cannot override the entrypoint: SageMaker runs
+# `docker run <image> train`, and the script reads /opt/ml/input/config/hyperparameters.json.
+COPY container/train /usr/local/bin/train
+
 # Inference entry point: SageMaker runs `docker run <image> serve` and expects port 8080.
 COPY container/serve /usr/local/bin/serve
 EXPOSE 8080

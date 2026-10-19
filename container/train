@@ -1,0 +1,3 @@
+#!/bin/sh
+# SageMaker starts training containers as `docker run <image> train` (used by tuning jobs).
+exec python -m sepsis.train --from-sm-config

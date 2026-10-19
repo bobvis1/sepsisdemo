@@ -1,0 +1,14 @@
+{
+  "tuning_job": "sepsis-xgb-tune-261019-0914",
+  "objective": "validation:auprc",
+  "best_training_job": "sepsis-xgb-tune-261019-0914-016-eb6a8680",
+  "best_value": 0.1316000074148178,
+  "best_hyperparameters": {
+    "colsample_bytree": "0.466702098267758",
+    "eta": "0.040100572888051654",
+    "max_depth": "4",
+    "min_child_weight": "14.052557483004152",
+    "subsample": "0.6438043531627788"
+  },
+  "max_jobs": 20
+}
