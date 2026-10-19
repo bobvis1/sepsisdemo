@@ -3,8 +3,8 @@
 An hourly sepsis early-warning model, built to show a secure, reproducible SageMaker workflow:
 data ingestion, causal feature engineering in a custom container, training, patient-level
 bootstrap evaluation on an **external hospital**, a SageMaker Pipeline with conditional model
-registration, and serving. The pipeline and its engineering practices matter more here than the
-model's raw performance.
+registration, and serving. This is more of a demo of the pipeline and engineering practices rather 
+than a model with state-of-the-art performance.
 
 > **Research demonstration only. Not a medical device and not for clinical use.**
 
@@ -18,8 +18,8 @@ model's raw performance.
 | Training (logistic regression, XGBoost), local | Done |
 | Evaluation with patient-bootstrap CIs, hospital B external | Done (local models) |
 | SHAP and subgroup analysis (Clarify fallback) | Done |
-| SageMaker Pipeline with conditional registration | Defined and accepted by SageMaker; **not yet executed** |
-| SageMaker training jobs (Spot), hyperparameter tuning, MLflow | **Blocked on training instance quota** (requested) |
+| SageMaker Pipeline with conditional registration | Executed end to end on SageMaker (all 7 steps succeeded); XGBoost registered in Model Registry |
+| SageMaker training jobs, hyperparameter tuning, MLflow | Training ran in the pipeline; MLflow server provisioned; **tuning and MLflow logging pending** |
 | Serverless endpoint, Batch Transform | Handler and container verified locally; **cloud deployment pending** |
 
 Numbers below come from models trained locally; they will be refreshed from the SageMaker

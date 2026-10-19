@@ -27,7 +27,7 @@ The PhysioNet 2019 challenge data is the only dataset for this project.
 
 ## AWS and cost rules
 
-- **Ask the user before running any command that creates or deletes billable AWS resources** (Terraform apply/destroy, endpoint creation, tuning jobs, MLflow tracking servers, interface VPC endpoints). Give a one-line cost estimate when you ask.
+- **Tell the user about charges; explicit approval is not required.** The overall AWS budget limit (see `config/settings.yaml`) is the guardrail. When you run a command that creates billable AWS resources (Terraform apply, endpoint creation, tuning jobs, MLflow tracking servers, interface VPC endpoints), give a one-line cost estimate as you do it, and say when it is stopped or deleted. Still ask before destructive actions (Terraform destroy, `scripts/teardown.sh`, deleting data), and stay within the budget.
 - Create resources through IaC, not ad-hoc command line. Someone else should be able to grab this repo, point it to their own AWS account, and spin everything up.
 - Prefer serverless inference and Batch Transform over real-time endpoints.
 - Use managed Spot training where the job type supports it.
