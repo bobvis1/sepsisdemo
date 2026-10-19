@@ -27,9 +27,8 @@ alternative. Future work: run Clarify SHAP and bias reports as a pipeline step a
 ## From Phase 8 (deployment)
 
 - Make the pipeline's Evaluate step emit the serving bundle (model + `evaluation.json`) and register
-  that, so deployment needs no extra bundling step and the registered image is the deployed image.
-  Registered package v2 references an OCI-manifest image that CreateModel rejects; rebuild with the
-  fixed `push_image.sh` and re-register to remove the `--image-tag` override.
+  that, so deployment needs no extra bundling step. (The image problem is fixed: package v3 was
+  registered from a Docker-v2-manifest image and deploys with no override.)
 - Serverless endpoints with VPC and network isolation: revisit if AWS lifts the restriction; until
   then use an instance-based endpoint if the VPC boundary is required.
 - Batch Transform parity was checked on a 1,000-patient sample for speed; the full 20,000-patient

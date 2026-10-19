@@ -39,6 +39,7 @@ def main() -> None:
     ap.add_argument(
         "--tuned", action="store_true", help="XGBoost hyperparameters from docs/tuning_result.json"
     )
+    ap.add_argument("--no-spot", action="store_true", help="on-demand training (Spot short)")
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--upsert", action="store_true", help="create or update the pipeline")
     ap.add_argument("--start", action="store_true", help="start an execution and wait")
@@ -53,7 +54,7 @@ def main() -> None:
     s, infra = load_settings(), load_infra()
     pipe = build_pipeline(
         s, infra, image_uri=f"{infra.ecr_repository_url}:{args.image_tag}",
-        xgb_hp=xgb_hp, logreg_hp=args.logreg_hp, n_boot=args.n_boot,
+        xgb_hp=xgb_hp, logreg_hp=args.logreg_hp, n_boot=args.n_boot, spot=not args.no_spot,
     )  # fmt: skip
     definition = json.loads(pipe.definition())
     out = Path("outputs/pipeline_definition.json")

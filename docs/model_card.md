@@ -38,7 +38,7 @@ hospital B. The threshold maximises the challenge's normalised utility score (of
 vendored unmodified). CIs: percentile bootstrap, patients resampled.
 
 <!-- results:headline:start -->
-_Source: SageMaker Pipeline execution c4hbrf2kv8hz (model package v2, XGBoost with Phase 5 tuned hyperparameters). 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
+_Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m70 (package v3, the deployed one), which produced identical metrics; XGBoost with Phase 5 tuned hyperparameters. 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
 
 | Metric | XGBoost, A validation | XGBoost, B (external) | Logistic regression, A validation | Logistic regression, B |
 |---|---|---|---|---|

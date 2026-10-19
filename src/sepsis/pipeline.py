@@ -96,6 +96,7 @@ def build_pipeline(
     xgb_hp: list[str] | None = None,
     logreg_hp: list[str] | None = None,
     n_boot: int = 1000,
+    spot: bool = True,
 ) -> Pipeline:
     image = image_uri or default_image(infra)
     session = PipelineSession(boto_session=boto_session(), default_bucket=infra.bucket)
@@ -126,7 +127,7 @@ def build_pipeline(
     for model, hp in (("logreg", logreg_hp or []), ("xgboost", xgb_hp or [])):
         trainer = make_trainer(
             session, s, infra, model=model, cli_args=hp_to_args(hp),
-            instance_type=train_type, image_uri=image,
+            instance_type=train_type, image_uri=image, spot=spot,
         )  # fmt: skip
         train_steps[model] = TrainingStepWithTags(
             name=f"Train{model.capitalize()}",

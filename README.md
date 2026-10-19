@@ -17,8 +17,8 @@ than a model with state-of-the-art performance.
 | Causal features + patient-level splits, SageMaker Processing job | Done; cloud output identical to local run |
 | Training (logistic regression, XGBoost), local | Done |
 | Evaluation with patient-bootstrap CIs, hospital B external | Done (SageMaker pipeline run, tuned model) |
-| SHAP and subgroup analysis (Clarify fallback) | Done (on the registered model, v2) |
-| SageMaker Pipeline with conditional registration | Executed end to end on SageMaker (all 7 steps succeeded); tuned XGBoost registered as v2 in Model Registry |
+| SHAP and subgroup analysis (Clarify fallback) | Done (on the registered model; v3 is identical) |
+| SageMaker Pipeline with conditional registration | Executed end to end on SageMaker (all 7 steps succeeded); tuned XGBoost registered (v3 is the approved, deployable version) |
 | SageMaker training jobs, hyperparameter tuning, MLflow | Done: 20-trial Bayesian tuning job ([docs/tuning_result.json](docs/tuning_result.json)); runs logged to managed MLflow |
 | Serverless endpoint, Batch Transform | Done: endpoint invoked and deleted; Batch Transform scores match `evaluate.py` (see below) |
 
@@ -69,7 +69,7 @@ inference, so the same `features.py` is used offline and at serving time.
 ## Results
 
 <!-- results:headline:start -->
-_Source: SageMaker Pipeline execution c4hbrf2kv8hz (model package v2, XGBoost with Phase 5 tuned hyperparameters). 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
+_Source: SageMaker Pipeline executions c4hbrf2kv8hz (package v2) and 9ot5kpyg2m70 (package v3, the deployed one), which produced identical metrics; XGBoost with Phase 5 tuned hyperparameters. 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
 
 | Metric | XGBoost, A validation | XGBoost, B (external) | Logistic regression, A validation | Logistic regression, B |
 |---|---|---|---|---|
@@ -147,7 +147,7 @@ Request format ([docs/sample_request.json](docs/sample_request.json) is a 12-hou
  "all_hours": false}
 ```
 
-Response from the deployed serverless endpoint (model package v2; saved as
+Response from the deployed serverless endpoint (model package v3; saved as
 [docs/sample_response.json](docs/sample_response.json)). The cold start and a warm call returned
 identical scores:
 
@@ -175,7 +175,12 @@ through a network-isolated Batch Transform job in the VPC. Scores match the `eva
   in this setup, so the endpoint runs outside the VPC (training and Batch Transform stay inside,
   isolated). The container holds no secrets and only serves scoring requests.
 - Docker Desktop's containerd store pushes OCI image manifests, which CreateModel rejects;
-  `scripts/push_image.sh` now requests Docker v2 manifests.
+  `scripts/push_image.sh` now requests Docker v2 manifests. Package v1 and v2 reference the old
+  image (v2 is `Rejected`, superseded); v3 is the same model registered from the fixed image and
+  deploys with no override.
+- Spot ml.m5.large capacity was unavailable several times (tuning and a pipeline run sat in
+  "Insufficient capacity"); `--no-spot` on `run_tuning.py` and `run_pipeline.py` is the fallback,
+  costing a few cents more.
 
 Rows must be consecutive hours (`ICULOS` increasing by 1); other bad input returns HTTP 400.
 
