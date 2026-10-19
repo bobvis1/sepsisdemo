@@ -2352,20 +2352,26 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+tracking = [
+    { name = "mlflow" },
+    { name = "sagemaker-mlflow" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.35" },
+    { name = "mlflow", marker = "extra == 'tracking'", specifier = ">=3.17.1" },
     { name = "pandas", specifier = ">=3.0.6" },
     { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "sagemaker", specifier = "==3.25.0" },
+    { name = "sagemaker-mlflow", marker = "extra == 'tracking'", specifier = ">=0.5.0" },
     { name = "scikit-learn", specifier = ">=1.9.1" },
     { name = "xgboost", specifier = ">=3.2.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "tracking"]
 
 [[package]]
 name = "setuptools"

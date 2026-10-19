@@ -19,6 +19,18 @@ from sepsis.config import load_infra, load_settings
 from sepsis.pipeline import build_pipeline
 
 
+def log_to_mlflow(infra, execution_id: str) -> None:
+    """Log the finished execution to MLflow when the server and the `tracking` extra exist."""
+    if not infra.mlflow_tracking_server_arn:
+        return
+    try:
+        from sepsis.tracking import log_pipeline_execution
+    except ImportError:
+        print("mlflow not installed (uv sync --extra tracking); skipping MLflow logging")
+        return
+    print("logged to MLflow:", log_pipeline_execution(infra, execution_id))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--image-tag", default="latest")
@@ -59,6 +71,7 @@ def main() -> None:
         execution.wait()
         for st in execution.list_steps():
             print(f"  {st['StepName']}: {st['StepStatus']}")
+        log_to_mlflow(infra, execution.arn.rsplit("/", 1)[-1])
 
 
 if __name__ == "__main__":

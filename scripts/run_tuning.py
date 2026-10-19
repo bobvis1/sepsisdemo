@@ -111,6 +111,13 @@ def main() -> None:
     }
     RESULT.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
+    if infra.mlflow_tracking_server_arn:
+        try:
+            from sepsis.tracking import log_tuning_job
+
+            print("logged to MLflow:", log_tuning_job(infra, name))
+        except ImportError:
+            print("mlflow not installed (uv sync --extra tracking); skipping MLflow logging")
 
 
 if __name__ == "__main__":

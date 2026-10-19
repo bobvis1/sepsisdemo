@@ -36,6 +36,7 @@ class Infra:
     security_group_id: str
     ecr_repository_url: str
     model_package_group_name: str = "sepsis-models"
+    mlflow_tracking_server_arn: str | None = None  # None when enable_mlflow is false
 
 
 def load_settings() -> Settings:
@@ -59,6 +60,7 @@ def load_infra() -> Infra:
         security_group_id=v["security_group_id"],
         ecr_repository_url=v["ecr_repository_url"],
         model_package_group_name=v.get("model_package_group_name") or "sepsis-models",
+        mlflow_tracking_server_arn=v.get("mlflow_tracking_server_arn"),
     )
 
 

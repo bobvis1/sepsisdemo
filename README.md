@@ -16,14 +16,14 @@ than a model with state-of-the-art performance.
 | Ingestion, consolidation, data summary | Done, counts reconcile ([docs/data_summary.md](docs/data_summary.md)) |
 | Causal features + patient-level splits, SageMaker Processing job | Done; cloud output identical to local run |
 | Training (logistic regression, XGBoost), local | Done |
-| Evaluation with patient-bootstrap CIs, hospital B external | Done (local models) |
-| SHAP and subgroup analysis (Clarify fallback) | Done |
-| SageMaker Pipeline with conditional registration | Executed end to end on SageMaker (all 7 steps succeeded); XGBoost registered in Model Registry |
-| SageMaker training jobs, hyperparameter tuning, MLflow | Training ran in the pipeline; MLflow server provisioned; **tuning and MLflow logging pending** |
+| Evaluation with patient-bootstrap CIs, hospital B external | Done (SageMaker pipeline run, tuned model) |
+| SHAP and subgroup analysis (Clarify fallback) | Done (on the registered model, v2) |
+| SageMaker Pipeline with conditional registration | Executed end to end on SageMaker (all 7 steps succeeded); tuned XGBoost registered as v2 in Model Registry |
+| SageMaker training jobs, hyperparameter tuning, MLflow | Done: 20-trial Bayesian tuning job ([docs/tuning_result.json](docs/tuning_result.json)); runs logged to managed MLflow |
 | Serverless endpoint, Batch Transform | Handler and container verified locally; **cloud deployment pending** |
 
-Numbers below come from models trained locally; they will be refreshed from the SageMaker
-pipeline run (`scripts/render_results.py`).
+Numbers below come from the SageMaker pipeline run (`scripts/render_results.py` fills them from
+the evaluation output, so they are never hand-copied).
 
 ## Architecture
 
@@ -69,42 +69,43 @@ inference, so the same `features.py` is used offline and at serving time.
 ## Results
 
 <!-- results:headline:start -->
-_Source: local run (models trained locally; SageMaker pipeline run pending). 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
+_Source: SageMaker Pipeline execution c4hbrf2kv8hz (model package v2, XGBoost with Phase 5 tuned hyperparameters). 95% CIs from 1000 patient-level bootstrap resamples. Calibration and alert threshold fit on hospital A validation only; hospital B is an untouched external test set._
 
 | Metric | XGBoost, A validation | XGBoost, B (external) | Logistic regression, A validation | Logistic regression, B |
 |---|---|---|---|---|
 | Patients (septic) | 4,067 (358) | 20,000 (1,142) | 4,067 (358) | 20,000 (1,142) |
 | Hour prevalence | 0.0216 | 0.0141 | 0.0216 | 0.0141 |
-| AUROC | 0.800 (0.782-0.820) | 0.776 (0.764-0.787) | 0.754 (0.732-0.776) | 0.711 (0.697-0.725) |
-| AUPRC | 0.117 (0.101-0.138) | 0.056 (0.051-0.063) | 0.097 (0.087-0.115) | 0.049 (0.045-0.056) |
+| AUROC | 0.809 (0.791-0.829) | 0.786 (0.775-0.798) | 0.754 (0.732-0.776) | 0.711 (0.696-0.725) |
+| AUPRC | 0.132 (0.111-0.157) | 0.072 (0.065-0.081) | 0.097 (0.087-0.115) | 0.049 (0.045-0.056) |
 | Brier (calibrated) | 0.020 (0.018-0.022) | 0.014 (0.013-0.014) | 0.020 (0.018-0.022) | 0.015 (0.014-0.017) |
-| Challenge utility (normalised) | 0.382 (0.336-0.424) | 0.245 (0.221-0.270) | 0.332 (0.287-0.372) | 0.194 (0.169-0.219) |
-| Median lead time, h | 35.0 (27.5-42.0) | 32.0 (29.0-37.0) | 38.0 (30.0-45.0) | 30.0 (27.0-37.0) |
-| Septic patients alerted before onset | 0.858 (0.822-0.893) | 0.704 (0.676-0.730) | 0.737 (0.693-0.783) | 0.593 (0.564-0.621) |
-| False alarms per non-septic patient-day | 4.33 (4.11-4.56) | 1.87 (1.77-1.97) | 2.98 (2.80-3.15) | 2.07 (1.97-2.18) |
+| Challenge utility (normalised) | 0.399 (0.355-0.439) | 0.245 (0.222-0.268) | 0.332 (0.287-0.372) | 0.193 (0.168-0.218) |
+| Median lead time, h | 36.5 (29.0-44.5) | 33.0 (29.0-39.0) | 38.0 (30.0-45.0) | 30.0 (26.0-37.0) |
+| Septic patients alerted before onset | 0.732 (0.686-0.778) | 0.475 (0.448-0.504) | 0.737 (0.693-0.783) | 0.593 (0.564-0.620) |
+| False alarms per non-septic patient-day | 2.34 (2.17-2.50) | 0.79 (0.71-0.88) | 2.98 (2.81-3.15) | 2.07 (1.97-2.18) |
 
-XGBoost alert threshold: 0.0243 (calibrated probability).
+XGBoost alert threshold: 0.0332 (calibrated probability).
 <!-- results:headline:end -->
 
-Reading the table: every metric is lower on hospital B, the expected cost of external validation.
+Reading the table: discrimination and utility are lower on hospital B, the expected cost of external validation.
 Hour prevalence also differs (A 2.2%, B 1.4%), so AUPRC is not comparable across hospitals; compare
 each against its own prevalence. The alert threshold maximises the challenge utility, which charges
-very little for false alarms, so it implies about 2 to 4 false alarms per non-septic patient-day. That is
-not a clinically usable burden (see [docs/future_work.md](docs/future_work.md)).
+very little for false alarms. On hospital A it alerts on 16% of patient-hours (2.3 false alarms per
+non-septic patient-day) and still alerts before onset for only 73% of septic patients; on B it
+alerts on 6% of hours (0.8 per patient-day) and reaches 48%. That is not a clinically usable trade-off (see [docs/future_work.md](docs/future_work.md)).
 
 ### What drives the model (XGBoost, SHAP)
 
 <!-- results:shap:start -->
 | Variable | Share of total |SHAP|, A validation | Share, B |
 |---|---|---|
-| FiO2 | 12.9% | 10.7% |
-| ICULOS | 12.9% | 11.2% |
-| Temp | 6.9% | 6.1% |
-| Resp | 5.6% | 5.2% |
-| Lactate | 5.4% | 4.7% |
-| Unit1 | 5.2% | 4.6% |
-| SBP | 4.7% | 4.5% |
-| Creatinine | 3.9% | 4.1% |
+| FiO2 | 14.1% | 12.3% |
+| ICULOS | 13.0% | 11.4% |
+| Temp | 7.4% | 6.6% |
+| Lactate | 6.5% | 5.9% |
+| Resp | 6.1% | 5.4% |
+| SBP | 5.4% | 4.9% |
+| Creatinine | 4.1% | 4.5% |
+| WBC | 3.7% | 3.9% |
 <!-- results:shap:end -->
 
 More in [docs/model_card.md](docs/model_card.md).
@@ -167,9 +168,15 @@ Python 3.11 · **sagemaker 3.25.0** (v3 SDK, pinned; its API differs from v2) ·
 scikit-learn 1.9.1 · pandas 3.0.6 · Terraform AWS provider ~> 6.0. Resources are tagged
 `project=sepsis-sagemaker`, `owner`, `env=demo`.
 
+Experiment tracking is optional: `uv sync --extra tracking` adds `mlflow` and `sagemaker-mlflow`; the
+launchers then log pipeline executions and tuning jobs to the managed MLflow server from the client
+(jobs are network-isolated), and `scripts/log_to_mlflow.py` backfills earlier runs.
+
 ## Cost
 
-Design choices: no NAT gateway and no interface endpoints (S3 gateway endpoint only), Spot training,
+Design choices: no NAT gateway and no interface endpoints (S3 gateway endpoint only), Spot training
+(the 20-trial tuning job ran on-demand, about $0.20, because Spot ml.m5.large had no capacity;
+`scripts/run_tuning.py --no-spot`),
 serverless inference and Batch Transform instead of real-time endpoints, an AWS Budgets alarm, and
 a teardown script. Approximate running costs: one KMS key about $1 per month, S3 and ECR storage
 cents per month, a Processing or Training run cents, managed MLflow about $0.60 per hour while the
