@@ -21,8 +21,11 @@ To regenerate it locally (the built files are git-ignored, so this writes `outpu
 
 ```bash
 make showcase        # build outputs/showcase/ (data.json, index.html, standalone.html)
-make showcase-test   # 14 browser tests in real Chrome (Node 22.12+)
+make showcase-test   # rebuild, then 14 browser tests in real Chrome
 ```
+
+The browser tests need Node 22.12 or newer and Google Chrome (set `CHROME_PATH` if it is not at the
+macOS default); they drive the installed Chrome with `puppeteer-core`, so nothing is downloaded.
 
 The plan and the browser tests are in [VIZ_PLAN.md](VIZ_PLAN.md) and
 [showcase/tests/](showcase/tests/README.md).

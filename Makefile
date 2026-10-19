@@ -20,7 +20,7 @@ smoke:           ## trivial isolated Processing job in the VPC (Phase 1 acceptan
 showcase:        ## build the results page and its data into outputs/showcase (local, free)
 	$(PY) -m sepsis.showcase --model-dir outputs/pipe2/model --evaluation outputs/pipe2/eval_xgboost \
 	    --features data/features --template showcase/template.html --out outputs/showcase
-showcase-test:   ## browser tests of the built page (Node 22.12+ and Chrome; run make showcase first)
+showcase-test: showcase  ## rebuild, then browser tests of the page (Node 22.12+ and Chrome)
 	PATH="$$HOME/.local/share/fnm/aliases/default/bin:$$PATH" npm --prefix showcase/tests ci
 	PATH="$$HOME/.local/share/fnm/aliases/default/bin:$$PATH" npm --prefix showcase/tests test
 .PHONY: help setup lint test tf-plan tf-apply whoami smoke showcase showcase-test
